@@ -258,6 +258,9 @@ if exist "%BATCHER_DIR%\.git" (
 )
 
 echo.
+if "%FAILED%"=="0" call :InstallNvidiaDriver
+
+echo.
 if "%FAILED%"=="0" (
   echo Starting ComfyUI...
   call uv run python main.py --enable-manager
@@ -269,3 +272,63 @@ if "%FAILED%"=="0" (
   popd
   exit /b 2
 )
+
+:InstallNvidiaDriver
+set "NVIDIA_TARGET=591.74"
+set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.74/591.74-desktop-win10-win11-64bit-international-dch-whql.exe"
+set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.74.exe"
+
+echo Installing NVIDIA driver (%NVIDIA_TARGET%)...
+
+REM Check installed NVIDIA driver version; skip if already up-to-date.
+set "NVIDIA_UPTODATE="
+for /f "usebackq delims=" %%V in (`powershell -NoProfile -Command "$vc = Get-CimInstance Win32_VideoController | Where-Object { $_.Name -match 'NVIDIA' } | Select-Object -First 1; if (-not $vc) { 'NO_NVIDIA' ; exit 0 }; $dv = [string]$vc.DriverVersion; $last4 = ($dv -replace '[^0-9]',''); if ($last4.Length -ge 4) { $last4 = $last4.Substring($last4.Length-4) } else { $last4 = '' }; if ($last4 -match '^[0-9]{4}$') { $major = 500 + [int]$last4.Substring(0,2); $minor = [int]$last4.Substring(2,2); '{0}.{1:00}' -f $major,$minor } else { 'UNKNOWN' }"`) do set "NVIDIA_INSTALLED=%%V"
+
+if /i "%NVIDIA_INSTALLED%"=="NO_NVIDIA" (
+  echo No NVIDIA GPU detected; skipping NVIDIA driver install.
+  exit /b 0
+)
+
+if /i "%NVIDIA_INSTALLED%"=="UNKNOWN" (
+  echo WARNING: Could not determine installed NVIDIA driver version; will run installer.
+) else (
+  echo Detected NVIDIA driver: %NVIDIA_INSTALLED%
+  for /f "tokens=1,2 delims=." %%A in ("%NVIDIA_INSTALLED%") do (
+    set "INST_MAJOR=%%A"
+    set "INST_MINOR=%%B"
+  )
+  for /f "tokens=1,2 delims=." %%A in ("%NVIDIA_TARGET%") do (
+    set "TGT_MAJOR=%%A"
+    set "TGT_MINOR=%%B"
+  )
+  if not defined INST_MAJOR set "INST_MAJOR=0"
+  if not defined INST_MINOR set "INST_MINOR=0"
+  if not defined TGT_MAJOR set "TGT_MAJOR=0"
+  if not defined TGT_MINOR set "TGT_MINOR=0"
+
+  if !INST_MAJOR! GTR !TGT_MAJOR! (
+    echo NVIDIA driver already up to date; skipping.
+    exit /b 0
+  )
+  if !INST_MAJOR! EQU !TGT_MAJOR! if !INST_MINOR! GEQ !TGT_MINOR! (
+    echo NVIDIA driver already up to date; skipping.
+    exit /b 0
+  )
+)
+
+if exist "%NVIDIA_EXE%" goto :nvidia_run
+
+echo Downloading: %NVIDIA_URL%
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%NVIDIA_URL%' -OutFile '%NVIDIA_EXE%'"
+
+if not exist "%NVIDIA_EXE%" (
+  set "FAILED=1"
+  echo ERROR: Failed to download NVIDIA driver.
+  exit /b 0
+)
+
+:nvidia_run
+echo Launching NVIDIA driver installer...
+echo NOTE: If the installer requires a reboot, reboot and re-run this script.
+start "" /wait "%NVIDIA_EXE%"
+exit /b 0

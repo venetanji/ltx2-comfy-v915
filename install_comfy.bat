@@ -76,7 +76,7 @@ if exist "%COMFY_DIR%\" (
 ) else (
   echo Cloning ComfyUI...
   pushd "%SCRIPT_DIR%"
-  call "%GIT_EXE%" clone https://github.com/Comfy-Org/ComfyUI
+  call "%GIT_EXE%" clone --depth 1 https://github.com/Comfy-Org/ComfyUI
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to clone ComfyUI.
@@ -260,7 +260,7 @@ if exist "%BATCHER_DIR%\.git" (
   if exist "%BATCHER_DIR%\" (
     echo WARNING: "%BATCHER_DIR%" exists but is not a git repo; skipping clone.
   ) else (
-    call "%GIT_EXE%" clone https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git "%BATCHER_DIR%"
+    call "%GIT_EXE%" clone --depth 1 https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git "%BATCHER_DIR%"
     if errorlevel 1 (
       set "FAILED=1"
       echo ERROR: Failed to clone ComfyUI-Simple-Prompt-Batcher.

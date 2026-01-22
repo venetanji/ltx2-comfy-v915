@@ -127,6 +127,10 @@ if not defined QBT_EXE (
   echo qBittorrent found: "%QBT_EXE%"
 )
 
+REM --- Ensure qBittorrent layout config (no subfolder) ---
+REM This makes torrents extract their contents directly into the save path.
+if "%FAILED%"=="0" call :QbtEnsureNoSubfolder
+
 REM --- Torrent prompt (download models into ComfyUI folder) ---
 echo.
 echo Looking for .torrent files next to this script...
@@ -439,3 +443,24 @@ if not defined GIT_EXE if exist "%ProgramFiles%\Git\bin\git.exe" set "GIT_EXE=%P
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\bin\git.exe"
 goto :eof
+
+:QbtEnsureNoSubfolder
+REM If qBittorrent is currently running, it won't pick up ini changes.
+tasklist /fi "imagename eq qbittorrent.exe" 2>nul | find /i "qbittorrent.exe" >nul
+if not errorlevel 1 (
+  echo.
+  echo qBittorrent is currently running.
+  echo Please CLOSE qBittorrent completely so the config change takes effect.
+  echo Then press Enter to continue...
+  pause >nul
+  goto :QbtEnsureNoSubfolder
+)
+
+set "QBT_INI=%AppData%\qBittorrent\qBittorrent.ini"
+if not exist "%AppData%\qBittorrent\" mkdir "%AppData%\qBittorrent" >nul 2>nul
+
+echo.
+echo Configuring qBittorrent to not create torrent subfolders...
+powershell -NoProfile -Command "$p=$env:APPDATA+'\qBittorrent\qBittorrent.ini'; $section='BitTorrent'; $key='Session\TorrentContentLayout'; $val='NoSubfolder'; if(!(Test-Path -LiteralPath $p)){New-Item -ItemType File -Force -Path $p | Out-Null}; $lines=Get-Content -LiteralPath $p -ErrorAction SilentlyContinue; if($null -eq $lines){$lines=@()}; $out=New-Object System.Collections.Generic.List[string]; $in=$false; $seen=$false; $set=$false; foreach($line in $lines){ if($line -match '^\s*\[(.+?)\]\s*$'){ if($in -and -not $set){ $out.Add(($key+'='+$val)); $set=$true }; $name=$Matches[1]; $in=($name -ieq $section); if($in){$seen=$true}; $out.Add($line); continue }; if($in -and ($line -match ('^\s*'+[regex]::Escape($key)+'\s*='))){ $out.Add(($key+'='+$val)); $set=$true } else { $out.Add($line) } }; if($in -and -not $set){ $out.Add(($key+'='+$val)); $set=$true }; if(-not $seen){ if($out.Count -gt 0 -and $out[$out.Count-1] -ne ''){ $out.Add('') }; $out.Add('['+$section+']'); $out.Add(($key+'='+$val)) }; [System.IO.File]::WriteAllLines($p, $out.ToArray(), (New-Object System.Text.UTF8Encoding($false)))"
+
+exit /b 0

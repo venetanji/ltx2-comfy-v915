@@ -461,6 +461,39 @@ if not exist "%AppData%\qBittorrent\" mkdir "%AppData%\qBittorrent" >nul 2>nul
 
 echo.
 echo Configuring qBittorrent to not create torrent subfolders...
-powershell -NoProfile -Command "$p=$env:APPDATA+'\qBittorrent\qBittorrent.ini'; $section='BitTorrent'; $key='Session\TorrentContentLayout'; $val='NoSubfolder'; if(!(Test-Path -LiteralPath $p)){New-Item -ItemType File -Force -Path $p | Out-Null}; $lines=Get-Content -LiteralPath $p -ErrorAction SilentlyContinue; if($null -eq $lines){$lines=@()}; $out=New-Object System.Collections.Generic.List[string]; $in=$false; $seen=$false; $set=$false; foreach($line in $lines){ if($line -match '^\s*\[(.+?)\]\s*$'){ if($in -and -not $set){ $out.Add(($key+'='+$val)); $set=$true }; $name=$Matches[1]; $in=($name -ieq $section); if($in){$seen=$true}; $out.Add($line); continue }; if($in -and ($line -match ('^\s*'+[regex]::Escape($key)+'\s*='))){ $out.Add(($key+'='+$val)); $set=$true } else { $out.Add($line) } }; if($in -and -not $set){ $out.Add(($key+'='+$val)); $set=$true }; if(-not $seen){ if($out.Count -gt 0 -and $out[$out.Count-1] -ne ''){ $out.Add('') }; $out.Add('['+$section+']'); $out.Add(($key+'='+$val)) }; [System.IO.File]::WriteAllLines($p, $out.ToArray(), (New-Object System.Text.UTF8Encoding($false)))"
+set "QBT_PS1=%TEMP%\qbt_set_layout.ps1"
+>  "%QBT_PS1%" echo $p = Join-Path $env:APPDATA 'qBittorrent\qBittorrent.ini'
+>> "%QBT_PS1%" echo $section = 'BitTorrent'
+>> "%QBT_PS1%" echo $key = 'Session\TorrentContentLayout'
+>> "%QBT_PS1%" echo $val = 'NoSubfolder'
+>> "%QBT_PS1%" echo if (-not (Test-Path -LiteralPath $p)) { New-Item -ItemType File -Force -Path $p ^| Out-Null }
+>> "%QBT_PS1%" echo $lines = Get-Content -LiteralPath $p -ErrorAction SilentlyContinue
+>> "%QBT_PS1%" echo if ($null -eq $lines) { $lines = @() }
+>> "%QBT_PS1%" echo $out = New-Object 'System.Collections.Generic.List[string]'
+>> "%QBT_PS1%" echo $inSection = $false
+>> "%QBT_PS1%" echo $seenSection = $false
+>> "%QBT_PS1%" echo $setKey = $false
+>> "%QBT_PS1%" echo foreach ($line in $lines) {
+>> "%QBT_PS1%" echo   $trim = $line.Trim()
+>> "%QBT_PS1%" echo   if ($trim.StartsWith('[') -and $trim.EndsWith(']')) {
+>> "%QBT_PS1%" echo     if ($inSection -and -not $setKey) { $out.Add($key + '=' + $val); $setKey = $true }
+>> "%QBT_PS1%" echo     $name = $trim.Substring(1, $trim.Length - 2)
+>> "%QBT_PS1%" echo     $inSection = ($name -ieq $section)
+>> "%QBT_PS1%" echo     if ($inSection) { $seenSection = $true }
+>> "%QBT_PS1%" echo     $out.Add($line)
+>> "%QBT_PS1%" echo     continue
+>> "%QBT_PS1%" echo   }
+>> "%QBT_PS1%" echo   if ($inSection -and ($trim -like ($key + '=*'))) { $out.Add($key + '=' + $val); $setKey = $true } else { $out.Add($line) }
+>> "%QBT_PS1%" echo }
+>> "%QBT_PS1%" echo if ($inSection -and -not $setKey) { $out.Add($key + '=' + $val); $setKey = $true }
+>> "%QBT_PS1%" echo if (-not $seenSection) {
+>> "%QBT_PS1%" echo   if ($out.Count -gt 0 -and $out[$out.Count-1] -ne '') { $out.Add('') }
+>> "%QBT_PS1%" echo   $out.Add('[' + $section + ']')
+>> "%QBT_PS1%" echo   $out.Add($key + '=' + $val)
+>> "%QBT_PS1%" echo }
+>> "%QBT_PS1%" echo [System.IO.File]::WriteAllLines($p, $out.ToArray(), (New-Object System.Text.UTF8Encoding($false)))
+
+powershell -NoProfile -ExecutionPolicy Bypass -File "%QBT_PS1%"
+del /q "%QBT_PS1%" >nul 2>nul
 
 exit /b 0

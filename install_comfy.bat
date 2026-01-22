@@ -270,6 +270,7 @@ if "%FAILED%"=="0" call :InstallNvidiaDriver
 echo.
 if "%FAILED%"=="0" (
   echo Starting ComfyUI...
+  set "GIT_PYTHON_GIT_EXECUTABLE=%GIT_EXE%"
   call "%UV_EXE%" run python main.py --enable-manager
   set "EXITCODE=%ERRORLEVEL%"
   popd

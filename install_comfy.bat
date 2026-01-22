@@ -132,9 +132,12 @@ echo.
 echo Looking for .torrent files next to this script...
 set "TORRENT_COUNT=0"
 for %%F in ("%SCRIPT_DIR%*.torrent") do (
-  set /a TORRENT_COUNT+=1
-  set "TORRENT[!TORRENT_COUNT!]=%%~fF"
-  set "TORRENT_NAME[!TORRENT_COUNT!]=%%~nxF"
+  REM Exclude NVIDIA driver torrent from the models list.
+  if /i not "%%~nxF"=="nvidia-driver.torrent" (
+    set /a TORRENT_COUNT+=1
+    set "TORRENT[!TORRENT_COUNT!]=%%~fF"
+    set "TORRENT_NAME[!TORRENT_COUNT!]=%%~nxF"
+  )
 )
 
 if "%TORRENT_COUNT%"=="0" (
@@ -173,7 +176,7 @@ if "%TORRENT_COUNT%"=="0" (
         call set "TNAME=%%TORRENT_NAME[%%S]%%"
         if defined TPATH (
           echo Opening "!TNAME!" with save path "%COMFY_DIR%"...
-          start "" "%QBT_EXE%" --skip-dialogue=true --save-path="%COMFY_DIR%" "!TPATH!"
+          start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DIR%" "!TPATH!"
         ) else (
           echo WARNING: Invalid selection: %%S
         )
@@ -281,6 +284,7 @@ if "%FAILED%"=="0" (
 set "NVIDIA_TARGET=591.74"
 set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.74/591.74-desktop-win10-win11-64bit-international-dch-whql.exe"
 set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.74.exe"
+set "NVIDIA_DL_DIR=%TEMP%\nvidia-driver-%NVIDIA_TARGET%"
 
 echo Installing NVIDIA driver (%NVIDIA_TARGET%)...
 
@@ -322,6 +326,77 @@ if /i "%NVIDIA_INSTALLED%"=="UNKNOWN" (
 
 if exist "%NVIDIA_EXE%" goto :nvidia_run
 
+REM Locate an optional NVIDIA driver torrent next to the script.
+set "NVIDIA_TORRENT="
+if exist "%SCRIPT_DIR%nvidia-driver.torrent" set "NVIDIA_TORRENT=%SCRIPT_DIR%nvidia-driver.torrent"
+
+echo.
+echo NVIDIA driver installer not found locally.
+echo Choose how to obtain it:
+echo   1^) Skip NVIDIA driver install
+echo   2^) Download via web ^(Invoke-WebRequest; can be slow^)
+if defined NVIDIA_TORRENT (
+  echo   3^) Download via torrent: "%NVIDIA_TORRENT%"
+) else (
+  echo   3^) Download via torrent: ^(no NVIDIA/driver .torrent found next to this script^)
+)
+
+set "NVIDIA_GET="
+if defined NVIDIA_TORRENT (
+  set /p "NVIDIA_GET=Choice [1-3] (default 3): "
+  if not defined NVIDIA_GET set "NVIDIA_GET=3"
+) else (
+  set /p "NVIDIA_GET=Choice [1-3] (default 2): "
+  if not defined NVIDIA_GET set "NVIDIA_GET=2"
+)
+
+if "%NVIDIA_GET%"=="1" (
+  echo Skipping NVIDIA driver install.
+  exit /b 0
+)
+
+if "%NVIDIA_GET%"=="3" (
+  if not defined NVIDIA_TORRENT (
+    echo ERROR: No NVIDIA/driver torrent found next to this script.
+    echo        Place a file like "nvidia-driver.torrent" next to this .bat, or choose option 2.
+    set "FAILED=1"
+    exit /b 0
+  )
+  if not exist "%NVIDIA_DL_DIR%" mkdir "%NVIDIA_DL_DIR%" >nul 2>nul
+
+  if not defined QBT_EXE (
+    echo ERROR: qBittorrent not available; cannot use torrent download.
+    set "FAILED=1"
+    exit /b 0
+  )
+
+  echo.
+  echo Starting qBittorrent for NVIDIA driver torrent...
+  start "" "%QBT_EXE%"
+  timeout /t 2 /nobreak >nul
+  echo Opening NVIDIA driver torrent with save path "%NVIDIA_DL_DIR%"...
+  start "" "%QBT_EXE%" --skip-dialog=true --save-path="%NVIDIA_DL_DIR%" "%NVIDIA_TORRENT%"
+  echo.
+  echo Wait for the driver download to finish, then press Enter to continue.
+  pause >nul
+
+  set "NVIDIA_EXE_TORRENT="
+  for /r "%NVIDIA_DL_DIR%" %%X in (*.exe) do (
+    if not defined NVIDIA_EXE_TORRENT set "NVIDIA_EXE_TORRENT=%%~fX"
+  )
+  if defined NVIDIA_EXE_TORRENT (
+    set "NVIDIA_EXE=!NVIDIA_EXE_TORRENT!"
+  )
+  if not exist "!NVIDIA_EXE!" (
+    set "FAILED=1"
+    echo ERROR: Could not find a downloaded NVIDIA driver .exe in "%NVIDIA_DL_DIR%".
+    exit /b 0
+  )
+  goto :nvidia_run
+)
+
+REM Option 2: web download
+echo.
 echo Downloading: %NVIDIA_URL%
 echo Please wait, this can take several minutes...
 powershell -NoProfile -Command "$ProgressPreference='Continue'; Invoke-WebRequest -Uri '%NVIDIA_URL%' -OutFile '%NVIDIA_EXE%'"

@@ -7,55 +7,59 @@ echo ============================================================
 
 set "FAILED=0"
 set "SCRIPT_DIR=%~dp0"
+set "UV_EXE="
+set "GIT_EXE="
 
-REM --- Install uv ---
+REM --- Install / locate uv ---
 echo.
-where uv >nul 2>nul
-if errorlevel 1 (
+call :FindUv
+if not defined UV_EXE (
   where winget >nul 2>nul
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: uv not found and winget is not available.
     echo Install "App Installer" from Microsoft Store or install uv manually.
   ) else (
-  echo Installing astral-sh.uv ^(source: winget^)...
-  winget install --id=astral-sh.uv -e --source winget --accept-source-agreements --accept-package-agreements
-  if errorlevel 1 (
-    echo WARNING: uv install via winget failed.
+    echo Installing astral-sh.uv ^(source: winget^)...
+    winget install --id=astral-sh.uv -e --source winget --accept-source-agreements --accept-package-agreements
+    if errorlevel 1 echo WARNING: uv install via winget failed.
+    call :FindUv
   )
-  )
-) 
-where uv >nul 2>nul
-if errorlevel 1 (
+)
+if not defined UV_EXE (
   set "FAILED=1"
-  echo ERROR: uv is still not available on PATH.
+  echo ERROR: uv is still not available after install.
 ) else (
-  echo uv already available; skipping install.
+  echo uv found: "%UV_EXE%"
 )
 
-REM --- Install Git ---
+REM --- Install / locate Git ---
 echo.
-where git >nul 2>nul
-if errorlevel 1 (
+call :FindGit
+if not defined GIT_EXE (
   where winget >nul 2>nul
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: git not found and winget is not available.
     echo Install "App Installer" from Microsoft Store or install Git manually.
   ) else (
-  echo Installing Git.Git ^(source: winget^)...
-  winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements
-  if errorlevel 1 (
-    echo WARNING: Git install via winget failed.
+    echo Installing Git.Git ^(source: winget^)...
+    winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements
+    if errorlevel 1 echo WARNING: Git install via winget failed.
+    call :FindGit
   )
-  )
-) 
-where git >nul 2>nul
-if errorlevel 1 (
+)
+if not defined GIT_EXE (
   set "FAILED=1"
-  echo ERROR: git is still not available on PATH.
+  echo ERROR: git is still not available after install.
 ) else (
-  echo Git already available; skipping install.
+  echo git found: "%GIT_EXE%"
+)
+
+if "%FAILED%"=="1" (
+  echo.
+  echo Aborting due to missing prerequisites.
+  exit /b 2
 )
 
 REM --- Clone ComfyUI from source ---
@@ -64,7 +68,7 @@ set "COMFY_DIR=%SCRIPT_DIR%ComfyUI"
 if exist "%COMFY_DIR%\" (
   echo ComfyUI already exists at: "%COMFY_DIR%"
   echo Updating repo...
-  git -C "%COMFY_DIR%" pull
+  call "%GIT_EXE%" -C "%COMFY_DIR%" pull
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to update ComfyUI repo.
@@ -72,7 +76,7 @@ if exist "%COMFY_DIR%\" (
 ) else (
   echo Cloning ComfyUI...
   pushd "%SCRIPT_DIR%"
-  git clone https://github.com/Comfy-Org/ComfyUI
+  call "%GIT_EXE%" clone https://github.com/Comfy-Org/ComfyUI
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to clone ComfyUI.
@@ -192,11 +196,11 @@ pushd "%COMFY_DIR%"
 if exist ".venv\Scripts\python.exe" (
   echo Existing venv found at ".venv"; reusing.
 ) else (
-  call uv venv --python 3.12
+  call "%UV_EXE%" venv --python 3.12
   if errorlevel 1 (
     echo uv venv failed; attempting "uv python install 3.12" then retry...
-    call uv python install 3.12
-    call uv venv --python 3.12
+    call "%UV_EXE%" python install 3.12
+    call "%UV_EXE%" venv --python 3.12
   )
   if errorlevel 1 (
     set "FAILED=1"
@@ -206,7 +210,7 @@ if exist ".venv\Scripts\python.exe" (
 
 echo.
 echo Installing torch + torchvision + torchaudio (CUDA 13.0 wheels)...
-call uv pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu130
+call "%UV_EXE%" pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu130
 if errorlevel 1 (
   set "FAILED=1"
   echo ERROR: Failed to install torch packages.
@@ -215,7 +219,7 @@ if errorlevel 1 (
 echo.
 echo Installing requirements...
 if exist "requirements.txt" (
-  call uv pip install -r requirements.txt
+  call "%UV_EXE%" pip install -r requirements.txt
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to install requirements.txt
@@ -226,7 +230,7 @@ if exist "requirements.txt" (
 )
 
 if exist "manager_requirements.txt" (
-  call uv pip install -r manager_requirements.txt
+  call "%UV_EXE%" pip install -r manager_requirements.txt
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to install manager_requirements.txt
@@ -240,7 +244,7 @@ echo Installing custom node: ComfyUI-Simple-Prompt-Batcher...
 if not exist "custom_nodes\" mkdir "custom_nodes" >nul 2>nul
 set "BATCHER_DIR=%CD%\custom_nodes\ComfyUI-Simple-Prompt-Batcher"
 if exist "%BATCHER_DIR%\.git" (
-  git -C "%BATCHER_DIR%" pull
+  call "%GIT_EXE%" -C "%BATCHER_DIR%" pull
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to update ComfyUI-Simple-Prompt-Batcher.
@@ -249,7 +253,7 @@ if exist "%BATCHER_DIR%\.git" (
   if exist "%BATCHER_DIR%\" (
     echo WARNING: "%BATCHER_DIR%" exists but is not a git repo; skipping clone.
   ) else (
-    git clone https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git "%BATCHER_DIR%"
+    call "%GIT_EXE%" clone https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git "%BATCHER_DIR%"
     if errorlevel 1 (
       set "FAILED=1"
       echo ERROR: Failed to clone ComfyUI-Simple-Prompt-Batcher.
@@ -263,7 +267,7 @@ if "%FAILED%"=="0" call :InstallNvidiaDriver
 echo.
 if "%FAILED%"=="0" (
   echo Starting ComfyUI...
-  call uv run python main.py --enable-manager
+  call "%UV_EXE%" run python main.py --enable-manager
   set "EXITCODE=%ERRORLEVEL%"
   popd
   exit /b %EXITCODE%
@@ -319,7 +323,8 @@ if /i "%NVIDIA_INSTALLED%"=="UNKNOWN" (
 if exist "%NVIDIA_EXE%" goto :nvidia_run
 
 echo Downloading: %NVIDIA_URL%
-powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%NVIDIA_URL%' -OutFile '%NVIDIA_EXE%'"
+echo Please wait, this can take several minutes...
+powershell -NoProfile -Command "$ProgressPreference='Continue'; Invoke-WebRequest -Uri '%NVIDIA_URL%' -OutFile '%NVIDIA_EXE%'"
 
 if not exist "%NVIDIA_EXE%" (
   set "FAILED=1"
@@ -329,6 +334,32 @@ if not exist "%NVIDIA_EXE%" (
 
 :nvidia_run
 echo Launching NVIDIA driver installer...
-echo NOTE: If the installer requires a reboot, reboot and re-run this script.
+echo IMPORTANT: DO NOT REBOOT this computer. These machines are reset on reboot.
+echo If the installer requests a reboot, close it and proceed without rebooting.
 start "" /wait "%NVIDIA_EXE%"
 exit /b 0
+
+:FindUv
+set "UV_EXE="
+for /f "delims=" %%P in ('where uv.exe 2^>nul') do (
+  set "UV_EXE=%%P"
+  goto :eof
+)
+for /f "delims=" %%P in ('where uv 2^>nul') do (
+  set "UV_EXE=%%P"
+  goto :eof
+)
+if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
+goto :eof
+
+:FindGit
+set "GIT_EXE="
+for /f "delims=" %%P in ('where git.exe 2^>nul') do (
+  set "GIT_EXE=%%P"
+  goto :eof
+)
+if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%ProgramFiles%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles%\Git\bin\git.exe"
+if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\bin\git.exe"
+goto :eof

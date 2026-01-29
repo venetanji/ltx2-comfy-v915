@@ -89,7 +89,7 @@ set "COMFY_DATA=%DOCS_DIR%\ComfyUI"
 set "COMFY_DATA_YAML=%COMFY_DATA:\=/%"
 set "CUSTOM_NODES_LIST=%SCRIPT_DIR%custom_nodes.txt"
 set "CUSTOM_NODES_DIR=%COMFY_DATA%\custom_nodes"
-set "WORKFLOWS_DIR=%COMFY_DATA%\workflows"
+set "WORKFLOWS_DIR=%COMFY_DATA%\user\default\workflows"
 
 if not exist "%COMFY_DATA%\" mkdir "%COMFY_DATA%" >nul 2>nul
 if not exist "%CUSTOM_NODES_DIR%\" mkdir "%CUSTOM_NODES_DIR%" >nul 2>nul

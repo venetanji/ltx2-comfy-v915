@@ -56,7 +56,7 @@ if not exist "%COMFY_DATA%" (
 )
 
 pushd "%COMFY_DIR%"
-"%UV_EXE%" run python main.py --enable-manager --base-directory "%COMFY_DATA%"
+"%UV_EXE%" run python main.py --port 8189 --listen 0.0.0.0 --enable-manager --base-directory "%COMFY_DATA%"
 set "EXITCODE=%ERRORLEVEL%"
 popd
 

@@ -8,6 +8,7 @@ echo - Models download to a single shared folder
 echo ============================================================
 
 set "FAILED=0"
+set "EXITCODE=0"
 set "SCRIPT_DIR=%~dp0"
 set "UV_EXE="
 set "GIT_EXE="
@@ -38,7 +39,7 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
       if errorlevel 1 (
         echo ERROR: git is required to bootstrap but was not found, and winget is unavailable.
         echo Install Git for Windows, then re-run this script.
-        exit /b 2
+        set "EXITCODE=2" & goto :Exit
       )
       echo Installing Git.Git ^(source: winget^)...
       winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements
@@ -48,7 +49,7 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
     )
     if not defined GIT_EXE (
       echo ERROR: git is still not available after install.
-      exit /b 2
+      set "EXITCODE=2" & goto :Exit
     )
 
     if exist "%LAB_REPO%\.git" (
@@ -57,23 +58,23 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
       if exist "%LAB_REPO%\" (
         echo WARNING: "%LAB_REPO%" exists but is not a git repo; skipping bootstrap.
         echo Please delete the folder and re-run.
-        exit /b 2
+        set "EXITCODE=2" & goto :Exit
       )
       "!GIT_EXE!" clone --depth 1 https://github.com/venetanji/ltx2-comfy-v915 "%LAB_REPO%"
       if errorlevel 1 (
         echo ERROR: Failed to clone lab repo.
-        exit /b 2
+        set "EXITCODE=2" & goto :Exit
       )
     )
 
     if not exist "%LAB_REPO%\install_comfy.bat" (
       echo ERROR: Bootstrapped repo is missing install_comfy.bat
-      exit /b 2
+      set "EXITCODE=2" & goto :Exit
     )
 
     set "COMFY_BOOTSTRAPPED=1"
     call "%LAB_REPO%\install_comfy.bat"
-    exit /b %ERRORLEVEL%
+    set "EXITCODE=!ERRORLEVEL!" & goto :Exit
   )
 )
 
@@ -162,7 +163,7 @@ if not defined GIT_EXE (
 if "%FAILED%"=="1" (
   echo.
   echo Aborting due to missing prerequisites.
-  exit /b 2
+  set "EXITCODE=2" & goto :Exit
 )
 
 REM --- Install ComfyUI Desktop (winget) OR clone ComfyUI source ---
@@ -205,7 +206,7 @@ if exist "%LAB_REPO%\.git" (
 if not exist "%COMFY_SRC%\main.py" (
   echo ERROR: Vendored ComfyUI not found at: "%COMFY_SRC%"
   echo        Expected: "%COMFY_SRC%\main.py"
-  exit /b 2
+  set "EXITCODE=2" & goto :Exit
 )
 
 REM Ensure extra_model_paths.yaml points at the shared Documents folder.
@@ -248,7 +249,7 @@ if "%INSTALL_MODE%"=="1" (
       ) else (
         echo uv found: "%UV_EXE%"
       )
-      if "%FAILED%"=="1" exit /b 2
+      if "%FAILED%"=="1" ( set "EXITCODE=2" & goto :Exit )
       goto :install_source_after_desktop
     )
   )
@@ -271,7 +272,7 @@ if exist "%COMFY_SRC%\main.py" (
   >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
  ) else (
   echo ERROR: Vendored ComfyUI not found at: "%COMFY_SRC%"
-  exit /b 2
+  set "EXITCODE=2" & goto :Exit
 )
 
 :after_install_choice
@@ -493,7 +494,7 @@ if "%FAILED%"=="0" (
 ) else (
   echo One or more steps failed. Fix errors above, then re-run.
   popd
-  exit /b 2
+  set "EXITCODE=2" & goto :Exit
 )
 
 :after_python_setup
@@ -767,3 +768,16 @@ echo [BitTorrent]>> "%QBT_INI%"
 echo Session\TorrentContentLayout=NoSubfolder>> "%QBT_INI%"
 
 exit /b 0
+
+:Exit
+if not defined EXITCODE set "EXITCODE=0"
+if not "%EXITCODE%"=="0" (
+  echo.
+  echo Installer failed with exit code %EXITCODE%.
+  echo.
+  if /i not "%COMFY_NO_PAUSE%"=="1" (
+    echo Press any key to close...
+    pause >nul
+  )
+)
+exit /b %EXITCODE%

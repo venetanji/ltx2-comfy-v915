@@ -13,12 +13,12 @@ if not defined DOCS_DIR set "DOCS_DIR=%USERPROFILE%\Documents"
 
 set "COMFY_DATA=%DOCS_DIR%\ComfyUI"
 echo Shared ComfyUI data folder: "%COMFY_DATA%"
-for %%I in ("%~dp0.") do set "REPO_DIR=%%~fI"
-set "COMFY_DIR=%REPO_DIR%\ComfyUI"
+set "COMFY_DIR=%DOCS_DIR%\comfyui-git"
+echo ComfyUI source folder: "%COMFY_DIR%"
 
 if not exist "%COMFY_DIR%\main.py" (
   echo ERROR: Could not find "%COMFY_DIR%\main.py".
-  echo Run install_comfy.bat first - it bootstraps the repo into Documents\comfyui-git.
+  echo Run install_comfy.bat first - it bootstraps the installer repo and clones ComfyUI into Documents\comfyui-git.
   pause
   exit /b 2
 )

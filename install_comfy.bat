@@ -18,18 +18,25 @@ set "DOCS_DIR="
 for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')" 2^>nul`) do set "DOCS_DIR=%%D"
 if not defined DOCS_DIR set "DOCS_DIR=%USERPROFILE%\Documents"
 
-REM --- Self-bootstrap: ensure we run from the cloned lab repo in Documents ---
-set "LAB_REPO=%DOCS_DIR%\comfyui-git"
+REM --- Repo layout ---
+REM Installer repo: contains this .bat, workflows/, custom_nodes.txt, and .torrent files.
+REM ComfyUI repo: actual ComfyUI source checkout.
+set "INSTALLER_REPO=%DOCS_DIR%\comfyui-git-installer"
+set "COMFY_SRC=%DOCS_DIR%\comfyui-git"
+set "INSTALLER_REPO_URL=https://github.com/venetanji/ltx2-comfy-v915"
+set "COMFYUI_REPO_URL=https://github.com/Comfy-Org/ComfyUI"
+
+REM --- Self-bootstrap: ensure we run from the installer repo in Documents ---
 set "SCRIPT_DIR_NORM=%SCRIPT_DIR%"
 if "%SCRIPT_DIR_NORM:~-1%"=="\" set "SCRIPT_DIR_NORM=%SCRIPT_DIR_NORM:~0,-1%"
-set "LAB_REPO_NORM=%LAB_REPO%"
-if "%LAB_REPO_NORM:~-1%"=="\" set "LAB_REPO_NORM=%LAB_REPO_NORM:~0,-1%"
+set "INSTALLER_REPO_NORM=%INSTALLER_REPO%"
+if "%INSTALLER_REPO_NORM:~-1%"=="\" set "INSTALLER_REPO_NORM=%INSTALLER_REPO_NORM:~0,-1%"
 
 if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
-  if /i not "%SCRIPT_DIR_NORM%"=="%LAB_REPO_NORM%" (
+  if /i not "%SCRIPT_DIR_NORM%"=="%INSTALLER_REPO_NORM%" (
     echo.
-    echo This installer should run from: "%LAB_REPO%"
-    echo Bootstrapping ^(clone/update^) the repo and relaunching...
+    echo This installer should run from: "%INSTALLER_REPO%"
+    echo Bootstrapping the installer repo and relaunching...
 
     REM Find git quickly (bootstrap path) and try winget install if missing.
     for /f "delims=" %%P in ('where git.exe 2^>nul') do (
@@ -57,35 +64,34 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
       set "EXITCODE=2" & goto :Exit
     )
 
-    if exist "%LAB_REPO%\.git" (
-      "!GIT_EXE!" -C "%LAB_REPO%" pull
+    if exist "%INSTALLER_REPO%\.git" (
+      "!GIT_EXE!" -C "%INSTALLER_REPO%" pull
     ) else (
-      if exist "%LAB_REPO%\" (
-        echo WARNING: "%LAB_REPO%" exists but is not a git repo; skipping bootstrap.
+      if exist "%INSTALLER_REPO%\" (
+        echo WARNING: "%INSTALLER_REPO%" exists but is not a git repo; skipping bootstrap.
         echo Please delete the folder and re-run.
         set "EXITCODE=2" & goto :Exit
       )
-      "!GIT_EXE!" clone --depth 1 https://github.com/venetanji/ltx2-comfy-v915 "%LAB_REPO%"
+      "!GIT_EXE!" clone --depth 1 "%INSTALLER_REPO_URL%" "%INSTALLER_REPO%"
       if errorlevel 1 (
         echo ERROR: Failed to clone lab repo.
         set "EXITCODE=2" & goto :Exit
       )
     )
 
-    if not exist "%LAB_REPO%\install_comfy.bat" (
+    if not exist "%INSTALLER_REPO%\install_comfy.bat" (
       echo ERROR: Bootstrapped repo is missing install_comfy.bat
       set "EXITCODE=2" & goto :Exit
     )
 
     set "COMFY_BOOTSTRAPPED=1"
-    call "%LAB_REPO%\install_comfy.bat"
+    call "%INSTALLER_REPO%\install_comfy.bat"
     set "EXITCODE=!ERRORLEVEL!" & goto :Exit
   )
 )
 
 REM --- Fixed install locations (do not depend on where the .bat lives) ---
 set "COMFY_DATA=%DOCS_DIR%\ComfyUI"
-set "COMFY_SRC=%LAB_REPO%\ComfyUI"
 set "CUSTOM_NODES_LIST=%SCRIPT_DIR%custom_nodes.txt"
 set "CUSTOM_NODES_DIR=%COMFY_DATA%\custom_nodes"
 set "WORKFLOWS_DIR=%COMFY_DATA%\workflows"
@@ -96,8 +102,8 @@ if not exist "%WORKFLOWS_DIR%\" mkdir "%WORKFLOWS_DIR%" >nul 2>nul
 
 echo.
 echo Shared ComfyUI data folder: "%COMFY_DATA%"
-echo Lab repo folder: "%LAB_REPO%"
-echo Source (vendored) folder: "%COMFY_SRC%"
+echo Installer repo folder: "%SCRIPT_DIR_NORM%"
+echo ComfyUI source folder: "%COMFY_SRC%"
 
 REM --- Choose install mode (default: Desktop) ---
 set "INSTALL_MODE="
@@ -205,17 +211,14 @@ goto :after_primary_install
 
 :install_source_primary
 echo.
-echo Preparing ComfyUI source (vendored in lab repo)...
-if exist "%LAB_REPO%\.git" (
-  echo Updating lab repo...
-  call "%GIT_EXE%" -C "%LAB_REPO%" pull
-  if errorlevel 1 (
-    echo WARNING: Failed to update lab repo; continuing.
-  )
+echo Preparing ComfyUI source (git checkout)...
+call :EnsureComfyUiRepo
+if errorlevel 1 (
+  set "EXITCODE=2" & goto :Exit
 )
 
 if not exist "%COMFY_SRC%\main.py" (
-  echo ERROR: Vendored ComfyUI not found at: "%COMFY_SRC%"
+  echo ERROR: ComfyUI not found at: "%COMFY_SRC%"
   echo        Expected: "%COMFY_SRC%\main.py"
   set "EXITCODE=2" & goto :Exit
 )
@@ -270,11 +273,10 @@ goto :after_install_choice
 
 :install_source_after_desktop
 echo.
-echo Preparing ComfyUI source (vendored in lab repo)...
-if exist "%LAB_REPO%\.git" (
-  echo Updating lab repo...
-  call "%GIT_EXE%" -C "%LAB_REPO%" pull
-  if errorlevel 1 echo WARNING: Failed to update lab repo.
+echo Preparing ComfyUI source (git checkout)...
+call :EnsureComfyUiRepo
+if errorlevel 1 (
+  set "EXITCODE=2" & goto :Exit
 )
 if exist "%COMFY_SRC%\main.py" (
   echo.
@@ -282,7 +284,7 @@ if exist "%COMFY_SRC%\main.py" (
   >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
   >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
  ) else (
-  echo ERROR: Vendored ComfyUI not found at: "%COMFY_SRC%"
+  echo ERROR: ComfyUI not found at: "%COMFY_SRC%"
   set "EXITCODE=2" & goto :Exit
 )
 
@@ -760,6 +762,37 @@ if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles%\ComfyUI Desktop\ComfyU
 if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe"
 if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe"
 
+exit /b 0
+
+:EnsureComfyUiRepo
+REM Ensures %COMFY_SRC% is a git checkout of ComfyUI.
+REM Uses %COMFYUI_REPO_URL%.
+if not defined GIT_EXE (
+  echo ERROR: git is required but was not found.
+  exit /b 1
+)
+
+if exist "%COMFY_SRC%\.git" (
+  echo Updating ComfyUI repo in "%COMFY_SRC%"...
+  call "%GIT_EXE%" -C "%COMFY_SRC%" pull
+  if errorlevel 1 (
+    echo WARNING: Failed to update ComfyUI repo; continuing.
+  )
+  exit /b 0
+)
+
+if exist "%COMFY_SRC%\" (
+  echo ERROR: "%COMFY_SRC%" exists but is not a git repo.
+  echo Delete it and re-run, or fix it manually.
+  exit /b 1
+)
+
+echo Cloning ComfyUI into "%COMFY_SRC%"...
+call "%GIT_EXE%" clone --depth 1 "%COMFYUI_REPO_URL%" "%COMFY_SRC%"
+if errorlevel 1 (
+  echo ERROR: Failed to clone ComfyUI repo.
+  exit /b 1
+)
 exit /b 0
 
 :QbtEnsureNoSubfolder

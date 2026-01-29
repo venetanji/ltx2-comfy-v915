@@ -40,14 +40,8 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
     echo This installer should run from: "%INSTALLER_REPO%"
     echo Bootstrapping the installer repo and relaunching...
 
-    REM Find git quickly (bootstrap path) and try winget install if missing.
-    for /f "delims=" %%P in ('where git.exe 2^>nul') do (
-      if not defined GIT_EXE set "GIT_EXE=%%P"
-    )
-    if not defined GIT_EXE if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
-    if not defined GIT_EXE if exist "%ProgramFiles%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles%\Git\bin\git.exe"
-    if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
-    if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\bin\git.exe"
+    REM Find git and try winget install if missing.
+    call :FindGit
     if not defined GIT_EXE (
       where winget >nul 2>nul
       if errorlevel 1 (
@@ -57,9 +51,7 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
       )
       echo Installing Git.Git ^(source: winget^)...
       winget install --id Git.Git -e --source winget --accept-source-agreements --accept-package-agreements
-      for /f "delims=" %%P in ('where git.exe 2^>nul') do (
-        if not defined GIT_EXE set "GIT_EXE=%%P"
-      )
+      call :FindGit
     )
     if not defined GIT_EXE (
       echo ERROR: git is still not available after install.
@@ -787,10 +779,31 @@ set "GIT_EXE="
 for /f "delims=" %%P in ('where git.exe 2^>nul') do (
   if not defined GIT_EXE set "GIT_EXE=%%P"
 )
+REM winget shim links (may exist even when PATH isn't refreshed)
+if not defined GIT_EXE if exist "%LocalAppData%\Microsoft\WinGet\Links\git.exe" set "GIT_EXE=%LocalAppData%\Microsoft\WinGet\Links\git.exe"
+
+REM Per-user install locations
+if not defined GIT_EXE if exist "%LocalAppData%\Programs\Git\cmd\git.exe" set "GIT_EXE=%LocalAppData%\Programs\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%LocalAppData%\Programs\Git\bin\git.exe" set "GIT_EXE=%LocalAppData%\Programs\Git\bin\git.exe"
+
 if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles%\Git\bin\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\bin\git.exe"
+
+REM Registry-based detection (handles non-standard install locations)
+if not defined GIT_EXE (
+  for /f "tokens=2,*" %%A in ('reg query "HKLM\SOFTWARE\GitForWindows" /v InstallPath 2^>nul ^| findstr /i "InstallPath"') do (
+    if exist "%%B\cmd\git.exe" set "GIT_EXE=%%B\cmd\git.exe"
+    if not defined GIT_EXE if exist "%%B\bin\git.exe" set "GIT_EXE=%%B\bin\git.exe"
+  )
+)
+if not defined GIT_EXE (
+  for /f "tokens=2,*" %%A in ('reg query "HKCU\SOFTWARE\GitForWindows" /v InstallPath 2^>nul ^| findstr /i "InstallPath"') do (
+    if exist "%%B\cmd\git.exe" set "GIT_EXE=%%B\cmd\git.exe"
+    if not defined GIT_EXE if exist "%%B\bin\git.exe" set "GIT_EXE=%%B\bin\git.exe"
+  )
+)
 exit /b 0
 
 :FindComfyDesktop

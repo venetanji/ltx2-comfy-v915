@@ -14,3 +14,4 @@ https://github.com/kijai/ComfyUI-KJNodes
 https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git
 https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
 https://github.com/Lightricks/ComfyUI-LTXVideo
+https://github.com/city96/ComfyUI-GGUF

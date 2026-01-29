@@ -8,8 +8,7 @@ echo - Shared data folder: %USERPROFILE%\Documents\ComfyUI
 echo ============================================================
 
 set "COMFY_DATA=%USERPROFILE%\Documents\ComfyUI"
-set "REPO_DIR=%~dp0"
-if "%REPO_DIR:~-1%"=="\" set "REPO_DIR=%REPO_DIR:~0,-1%"
+for %%I in ("%~dp0.") do set "REPO_DIR=%%~fI"
 set "COMFY_DIR=%REPO_DIR%\ComfyUI"
 
 if not exist "%COMFY_DIR%\main.py" (

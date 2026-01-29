@@ -328,6 +328,26 @@ if not exist "%CUSTOM_NODES_LIST%" (
   )
 )
 
+REM --- Desktop venv support: if Desktop created a venv under Documents\ComfyUI\.venv, install deps there too ---
+set "DESKTOP_VENV_PY=%COMFY_DATA%\.venv\Scripts\python.exe"
+if exist "%DESKTOP_VENV_PY%" (
+  echo.
+  echo Desktop venv detected: "%DESKTOP_VENV_PY%"
+  echo Installing common custom-node dependencies into Desktop venv...
+  call :VenvPipInstall "%DESKTOP_VENV_PY%" "opencv-python imageio-ffmpeg"
+
+  echo.
+  echo Installing custom node Python requirements into Desktop venv...
+  for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
+    if exist "%%~fD\requirements.txt" (
+      call :VenvPipInstallReq "%DESKTOP_VENV_PY%" "%%~fD\requirements.txt" "%%~nxD"
+    )
+  )
+) else (
+  echo.
+  echo NOTE: Desktop venv not found at "%COMFY_DATA%\.venv"; skipping Desktop venv dependency installs.
+)
+
 REM --- Optional NVIDIA driver upgrade (restored) ---
 if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
   echo.
@@ -841,6 +861,40 @@ call "%UV_EXE%" pip install -r "%NODE_DIR%\requirements.txt"
 if errorlevel 1 (
   echo WARNING: Failed to install requirements for "%~nx1".
   if "%STRICT_CUSTOM_NODE_REQUIREMENTS%"=="1" set "FAILED=1"
+)
+exit /b 0
+
+:VenvPipInstall
+REM Args: venv_python, package_spec
+set "VENV_PY=%~1"
+set "PKGS=%~2"
+if not exist "%VENV_PY%" exit /b 0
+if "%PKGS%"=="" exit /b 0
+
+"%VENV_PY%" -m pip --version >nul 2>nul
+if errorlevel 1 (
+  "%VENV_PY%" -m ensurepip --upgrade >nul 2>nul
+)
+"%VENV_PY%" -m pip install %PKGS%
+if errorlevel 1 (
+  echo WARNING: pip install failed in venv: "%VENV_PY%"
+)
+exit /b 0
+
+:VenvPipInstallReq
+REM Args: venv_python, requirements_file, display_name
+set "VENV_PY=%~1"
+set "REQ_FILE=%~2"
+set "REQ_NAME=%~3"
+if not exist "%VENV_PY%" exit /b 0
+if not exist "%REQ_FILE%" exit /b 0
+if "%REQ_NAME%"=="" set "REQ_NAME=%REQ_FILE%"
+
+echo(
+echo [custom_nodes] Desktop venv requirements: %REQ_NAME%
+"%VENV_PY%" -m pip install -r "%REQ_FILE%"
+if errorlevel 1 (
+  echo WARNING: Failed to install Desktop venv requirements for %REQ_NAME%
 )
 exit /b 0
 

@@ -1,0 +1,16 @@
+# List of ComfyUI custom nodes to install/update.
+# One entry per line. Empty lines and lines starting with # or ; are ignored.
+#
+# Formats supported:
+#   https://github.com/OWNER/REPO.git
+#   https://github.com/OWNER/REPO.git|FolderName
+#   https://github.com/OWNER/REPO.git#branch
+#   https://github.com/OWNER/REPO.git#branch|FolderName
+#
+# Examples:
+# https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git
+
+https://github.com/kijai/ComfyUI-KJNodes
+https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git
+https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
+https://github.com/Lightricks/ComfyUI-LTXVideo

@@ -86,6 +86,7 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
 
 REM --- Fixed install locations (do not depend on where the .bat lives) ---
 set "COMFY_DATA=%DOCS_DIR%\ComfyUI"
+set "COMFY_DATA_YAML=%COMFY_DATA:\=/%"
 set "CUSTOM_NODES_LIST=%SCRIPT_DIR%custom_nodes.txt"
 set "CUSTOM_NODES_DIR=%COMFY_DATA%\custom_nodes"
 set "WORKFLOWS_DIR=%COMFY_DATA%\workflows"
@@ -222,7 +223,7 @@ REM This keeps model discovery consistent even if users forget --base-directory.
 echo.
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
 >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
->> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
+>> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: '%COMFY_DATA_YAML%'
 
 :after_primary_install
 
@@ -276,7 +277,7 @@ if exist "%COMFY_SRC%\main.py" (
   echo.
   echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
   >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
-  >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
+  >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: '%COMFY_DATA_YAML%'
  ) else (
   echo ERROR: ComfyUI not found at: "%COMFY_SRC%"
   set "EXITCODE=2" & goto :Exit

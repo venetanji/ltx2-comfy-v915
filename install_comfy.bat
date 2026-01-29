@@ -13,8 +13,13 @@ set "SCRIPT_DIR=%~dp0"
 set "UV_EXE="
 set "GIT_EXE="
 
+REM --- Resolve the real Documents path (handles OneDrive/redirected profiles) ---
+set "DOCS_DIR="
+for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')" 2^>nul`) do set "DOCS_DIR=%%D"
+if not defined DOCS_DIR set "DOCS_DIR=%USERPROFILE%\Documents"
+
 REM --- Self-bootstrap: ensure we run from the cloned lab repo in Documents ---
-set "LAB_REPO=%USERPROFILE%\Documents\comfyui-git"
+set "LAB_REPO=%DOCS_DIR%\comfyui-git"
 set "SCRIPT_DIR_NORM=%SCRIPT_DIR%"
 if "%SCRIPT_DIR_NORM:~-1%"=="\" set "SCRIPT_DIR_NORM=%SCRIPT_DIR_NORM:~0,-1%"
 set "LAB_REPO_NORM=%LAB_REPO%"
@@ -79,7 +84,7 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
 )
 
 REM --- Fixed install locations (do not depend on where the .bat lives) ---
-set "COMFY_DATA=%USERPROFILE%\Documents\ComfyUI"
+set "COMFY_DATA=%DOCS_DIR%\ComfyUI"
 set "COMFY_SRC=%LAB_REPO%\ComfyUI"
 set "CUSTOM_NODES_LIST=%SCRIPT_DIR%custom_nodes.txt"
 set "CUSTOM_NODES_DIR=%COMFY_DATA%\custom_nodes"
@@ -172,6 +177,12 @@ goto :install_source_primary
 
 :install_desktop
 echo.
+call :FindComfyDesktop
+if defined COMFY_DESKTOP_EXE (
+  echo ComfyUI Desktop already installed: "%COMFY_DESKTOP_EXE%"
+  goto :after_primary_install
+)
+
 echo Installing ComfyUI Desktop via NSIS installer...
 set "COMFY_DESKTOP_DL=https://download.comfy.org/windows/nsis/x64"
 set "COMFY_DESKTOP_EXE=%TEMP%\comfyui-desktop-setup.exe"
@@ -369,46 +380,44 @@ if "%TORRENT_COUNT%"=="0" (
   echo.
   echo Enter one or more numbers ^(space-separated^) to open in qBittorrent.
   echo Enter ALL to open all torrents.
-  echo Leave blank to skip.
+  echo Leave blank for ALL.
   set "TORRENT_SELECTION="
-  set /p "TORRENT_SELECTION=Selection: "
+  set /p "TORRENT_SELECTION=Selection [ALL]: "
 
-  if /i "!TORRENT_SELECTION!"=="" (
-    echo Skipping torrent step.
-  ) else (
-    if /i "!TORRENT_SELECTION!"=="ALL" (
-      set "TORRENT_SELECTION="
-      for /l %%I in (1,1,!TORRENT_COUNT!) do set "TORRENT_SELECTION=!TORRENT_SELECTION! %%I"
-    )
+  if /i "!TORRENT_SELECTION!"=="" set "TORRENT_SELECTION=ALL"
 
-    if defined QBT_EXE (
-      echo.
-      echo Starting qBittorrent...
-      start "" "%QBT_EXE%"
-      REM Give the UI a moment to initialize so the next invocation is handled.
-      timeout /t 2 /nobreak >nul
+  if /i "!TORRENT_SELECTION!"=="ALL" (
+    set "TORRENT_SELECTION="
+    for /l %%I in (1,1,!TORRENT_COUNT!) do set "TORRENT_SELECTION=!TORRENT_SELECTION! %%I"
+  )
 
-      echo.
-      echo Opening the models folder in Explorer...
-      start "" explorer "%COMFY_DATA%"
+  if defined QBT_EXE (
+    echo.
+    echo Starting qBittorrent...
+    start "" "%QBT_EXE%"
+    REM Give the UI a moment to initialize so the next invocation is handled.
+    timeout /t 2 /nobreak >nul
 
-      for %%S in (!TORRENT_SELECTION!) do (
-        call set "TPATH=%%TORRENT[%%S]%%"
-        call set "TNAME=%%TORRENT_NAME[%%S]%%"
-        if defined TPATH (
-          echo Opening "!TNAME!" with save path "%COMFY_DATA%"...
-          start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "!TPATH!"
-        ) else (
-          echo WARNING: Invalid selection: %%S
-        )
+    echo.
+    echo Opening the models folder in Explorer...
+    start "" explorer "%COMFY_DATA%"
+
+    for %%S in (!TORRENT_SELECTION!) do (
+      call set "TPATH=%%TORRENT[%%S]%%"
+      call set "TNAME=%%TORRENT_NAME[%%S]%%"
+      if defined TPATH (
+        echo Opening "!TNAME!" with save path "%COMFY_DATA%"...
+        start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "!TPATH!"
+      ) else (
+        echo WARNING: Invalid selection: %%S
       )
-      echo.
-      echo NOTE: These torrents should contain a "models" folder.
-      echo       Saving into "%COMFY_DATA%" merges into "%COMFY_DATA%\models".
-    ) else (
-      set "FAILED=1"
-      echo ERROR: qBittorrent not available; cannot open torrents.
     )
+    echo.
+    echo NOTE: These torrents should contain a "models" folder.
+    echo       Saving into "%COMFY_DATA%" merges into "%COMFY_DATA%\models".
+  ) else (
+    set "FAILED=1"
+    echo ERROR: qBittorrent not available; cannot open torrents.
   )
 )
 
@@ -469,12 +478,16 @@ if exist "manager_requirements.txt" (
 )
 
 echo.
-echo Custom nodes already installed into "%CUSTOM_NODES_DIR%".
+echo Installing common custom-node dependencies (opencv-python, imageio-ffmpeg)...
+call "%UV_EXE%" pip install opencv-python imageio-ffmpeg
+if errorlevel 1 (
+  echo WARNING: Failed to install one or more optional custom-node dependencies.
+)
 
 echo.
-echo NVIDIA driver install is disabled by default for lab machines.
-echo If you need it, re-enable the :InstallNvidiaDriver call in this script.
-REM if "%FAILED%"=="0" call :InstallNvidiaDriver
+echo Custom nodes already installed into "%CUSTOM_NODES_DIR%".
+
+
 
 echo.
 if "%FAILED%"=="0" (
@@ -484,7 +497,7 @@ if "%FAILED%"=="0" (
     call "%UV_EXE%" run python main.py --enable-manager --base-directory "%COMFY_DATA%"
     set "EXITCODE=%ERRORLEVEL%"
     popd
-    exit /b %EXITCODE%
+    goto :Exit
   ) else (
     echo.
     echo Source installed/updated. Desktop install remains the default launcher.
@@ -577,6 +590,9 @@ if errorlevel 1 echo WARNING: Failed to clone %FOLDER%
 goto :eof
 
 :InstallNvidiaDriver
+echo NVIDIA driver installation has been removed from this lab installer.
+exit /b 0
+
 set "NVIDIA_TARGET=591.74"
 set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.74/591.74-desktop-win10-win11-64bit-international-dch-whql.exe"
 set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.74.exe"
@@ -732,6 +748,18 @@ if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\gi
 if not defined GIT_EXE if exist "%ProgramFiles%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles%\Git\bin\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\bin\git.exe"
+exit /b 0
+
+:FindComfyDesktop
+set "COMFY_DESKTOP_EXE="
+
+if exist "%LocalAppData%\Programs\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%LocalAppData%\Programs\ComfyUI\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%LocalAppData%\Programs\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%LocalAppData%\Programs\ComfyUI Desktop\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles%\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles%\ComfyUI\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles%\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles%\ComfyUI Desktop\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe"
+
 exit /b 0
 
 :QbtEnsureNoSubfolder

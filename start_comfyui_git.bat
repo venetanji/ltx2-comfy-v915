@@ -4,10 +4,15 @@ setlocal EnableExtensions EnableDelayedExpansion
 echo ============================================================
 echo Start ComfyUI (git/vendored)
 echo - Uses uv to run ComfyUI\main.py
-echo - Shared data folder: %USERPROFILE%\Documents\ComfyUI
+echo - Shared data folder: (resolved at runtime)
 echo ============================================================
 
-set "COMFY_DATA=%USERPROFILE%\Documents\ComfyUI"
+set "DOCS_DIR="
+for /f "usebackq delims=" %%D in (`powershell -NoProfile -Command "[Environment]::GetFolderPath('MyDocuments')" 2^>nul`) do set "DOCS_DIR=%%D"
+if not defined DOCS_DIR set "DOCS_DIR=%USERPROFILE%\Documents"
+
+set "COMFY_DATA=%DOCS_DIR%\ComfyUI"
+echo Shared ComfyUI data folder: "%COMFY_DATA%"
 for %%I in ("%~dp0.") do set "REPO_DIR=%%~fI"
 set "COMFY_DIR=%REPO_DIR%\ComfyUI"
 

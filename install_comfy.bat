@@ -110,7 +110,7 @@ echo Installing ComfyUI Desktop via NSIS installer...
 set "COMFY_DESKTOP_DL=https://download.comfy.org/windows/nsis/x64"
 set "COMFY_DESKTOP_EXE=%TEMP%\comfyui-desktop-setup.exe"
 
-powershell -NoProfile -Command "$ErrorActionPreference='Stop'; Write-Host ('Downloading: %COMFY_DESKTOP_DL%'); Invoke-WebRequest -Uri '%COMFY_DESKTOP_DL%' -OutFile '%COMFY_DESKTOP_EXE%' -MaximumRedirection 5"
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; $ProgressPreference='SilentlyContinue'; Write-Host ('Downloading: %COMFY_DESKTOP_DL%'); $wc = New-Object Net.WebClient; $wc.Headers.Add('User-Agent','comfy-lab-installer'); $wc.DownloadFile('%COMFY_DESKTOP_DL%','%COMFY_DESKTOP_EXE%');"
 if errorlevel 1 (
   echo WARNING: Could not auto-download Desktop installer.
   echo Opening download page: %COMFY_DESKTOP_DL%
@@ -646,7 +646,7 @@ REM Option 2: web download
 echo.
 echo Downloading: %NVIDIA_URL%
 echo Please wait, this can take several minutes...
-powershell -NoProfile -Command "$ProgressPreference='Continue'; Invoke-WebRequest -Uri '%NVIDIA_URL%' -OutFile '%NVIDIA_EXE%'"
+powershell -NoProfile -Command "$ProgressPreference='SilentlyContinue'; Invoke-WebRequest -Uri '%NVIDIA_URL%' -OutFile '%NVIDIA_EXE%'"
 
 if not exist "%NVIDIA_EXE%" (
   set "FAILED=1"

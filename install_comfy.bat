@@ -32,14 +32,21 @@ REM --- Choose install mode (default: Desktop) ---
 set "INSTALL_MODE="
 echo.
 echo Choose install method:
-echo   1^) Desktop app (winget)              [recommended for students]
+echo   1^) Desktop app (download)            [recommended for students]
 echo   2^) Source (git clone + Python deps)  [advanced / for devs]
 set /p "INSTALL_MODE=Choice [1-2] (default 1): "
 if not defined INSTALL_MODE set "INSTALL_MODE=1"
 if not "%INSTALL_MODE%"=="1" if not "%INSTALL_MODE%"=="2" set "INSTALL_MODE=1"
 
-REM --- Install / locate uv (source install only) ---
+set "DO_SOURCE=0"
+set "RUN_SOURCE=0"
 if "%INSTALL_MODE%"=="2" (
+  set "DO_SOURCE=1"
+  set "RUN_SOURCE=1"
+)
+
+REM --- Install / locate uv (source install only) ---
+if "%DO_SOURCE%"=="1" (
   echo.
   call :FindUv
   if not defined UV_EXE (
@@ -86,6 +93,7 @@ if not defined GIT_EXE (
   echo git found: "%GIT_EXE%"
 )
 
+
 if "%FAILED%"=="1" (
   echo.
   echo Aborting due to missing prerequisites.
@@ -93,52 +101,65 @@ if "%FAILED%"=="1" (
 )
 
 REM --- Install ComfyUI Desktop (winget) OR clone ComfyUI source ---
-if "%INSTALL_MODE%"=="1" (
-  echo.
-  echo Installing ComfyUI Desktop via winget...
-  where winget >nul 2>nul
+if "%INSTALL_MODE%"=="1" goto :install_desktop
+goto :install_source_primary
+
+:install_desktop
+echo.
+echo Installing ComfyUI Desktop via NSIS installer...
+set "COMFY_DESKTOP_DL=https://download.comfy.org/windows/nsis/x64"
+set "COMFY_DESKTOP_EXE=%TEMP%\comfyui-desktop-setup.exe"
+
+powershell -NoProfile -Command "$ErrorActionPreference='Stop'; Write-Host ('Downloading: %COMFY_DESKTOP_DL%'); Invoke-WebRequest -Uri '%COMFY_DESKTOP_DL%' -OutFile '%COMFY_DESKTOP_EXE%' -MaximumRedirection 5"
+if errorlevel 1 (
+  echo WARNING: Could not auto-download Desktop installer.
+  echo Opening download page: %COMFY_DESKTOP_DL%
+  start "" "%COMFY_DESKTOP_DL%"
+) else (
+  if exist "%COMFY_DESKTOP_EXE%" (
+    echo Running Desktop installer...
+    start "" /wait "%COMFY_DESKTOP_EXE%" /S
+  ) else (
+    echo WARNING: Desktop installer did not download correctly.
+    start "" "%COMFY_DESKTOP_DL%"
+  )
+)
+goto :after_primary_install
+
+:install_source_primary
+echo.
+echo Preparing ComfyUI source checkout...
+if exist "%COMFY_SRC%\" (
+  echo ComfyUI already exists at: "%COMFY_SRC%"
+  echo Updating repo...
+  call "%GIT_EXE%" -C "%COMFY_SRC%" pull
   if errorlevel 1 (
     set "FAILED=1"
-    echo ERROR: winget is not available (App Installer missing).
-  ) else (
-    winget install --id comfy.comfyui-desktop -e --source winget --accept-source-agreements --accept-package-agreements
-    if errorlevel 1 (
-      echo WARNING: winget install failed or app already installed.
-    )
+    echo ERROR: Failed to update ComfyUI repo.
   )
 ) else (
-  echo.
-  echo Preparing ComfyUI source checkout...
-  if exist "%COMFY_SRC%\" (
-    echo ComfyUI already exists at: "%COMFY_SRC%"
-    echo Updating repo...
-    call "%GIT_EXE%" -C "%COMFY_SRC%" pull
-    if errorlevel 1 (
-      set "FAILED=1"
-      echo ERROR: Failed to update ComfyUI repo.
-    )
-  ) else (
-    echo Cloning ComfyUI into Documents\comfyui-git...
-    call "%GIT_EXE%" clone --depth 1 https://github.com/Comfy-Org/ComfyUI "%COMFY_SRC%"
-    if errorlevel 1 (
-      set "FAILED=1"
-      echo ERROR: Failed to clone ComfyUI.
-    )
+  echo Cloning ComfyUI into Documents\comfyui-git...
+  call "%GIT_EXE%" clone --depth 1 https://github.com/Comfy-Org/ComfyUI "%COMFY_SRC%"
+  if errorlevel 1 (
+    set "FAILED=1"
+    echo ERROR: Failed to clone ComfyUI.
   )
-
-  if not exist "%COMFY_SRC%\main.py" (
-    echo ERROR: ComfyUI repo not present or incomplete at: "%COMFY_SRC%"
-    echo Aborting.
-    exit /b 2
-  )
-
-  REM Ensure extra_model_paths.yaml points at the shared Documents folder.
-  REM This keeps model discovery consistent even if users forget --base-directory.
-  echo.
-  echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
-  >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
-  >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
 )
+
+if not exist "%COMFY_SRC%\main.py" (
+  echo ERROR: ComfyUI repo not present or incomplete at: "%COMFY_SRC%"
+  echo Aborting.
+  exit /b 2
+)
+
+REM Ensure extra_model_paths.yaml points at the shared Documents folder.
+REM This keeps model discovery consistent even if users forget --base-directory.
+echo.
+echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
+>  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
+>> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
+
+:after_primary_install
 
 REM --- Offer to install source alongside Desktop (useful on second run) ---
 if "%INSTALL_MODE%"=="1" (
@@ -147,9 +168,33 @@ if "%INSTALL_MODE%"=="1" (
     echo Optional: install ComfyUI source checkout into "%COMFY_SRC%" as well?
     set "INSTALL_SOURCE_TOO="
     set /p "INSTALL_SOURCE_TOO=Install source too? [y/N]: "
-    if /i "%INSTALL_SOURCE_TOO%"=="Y" set "INSTALL_MODE=2"
-    if /i "%INSTALL_SOURCE_TOO%"=="YES" set "INSTALL_MODE=2"
-    if "%INSTALL_MODE%"=="2" goto :install_source_after_desktop
+    if /i "%INSTALL_SOURCE_TOO%"=="Y" set "DO_SOURCE=1"
+    if /i "%INSTALL_SOURCE_TOO%"=="YES" set "DO_SOURCE=1"
+    if "%DO_SOURCE%"=="1" (
+      echo.
+      call :FindUv
+      if not defined UV_EXE (
+        where winget >nul 2>nul
+        if errorlevel 1 (
+          set "FAILED=1"
+          echo ERROR: uv not found and winget is not available.
+          echo Install "App Installer" from Microsoft Store or install uv manually.
+        ) else (
+          echo Installing astral-sh.uv ^(source: winget^)...
+          winget install --id=astral-sh.uv -e --source winget --accept-source-agreements --accept-package-agreements
+          if errorlevel 1 echo WARNING: uv install via winget failed.
+          call :FindUv
+        )
+      )
+      if not defined UV_EXE (
+        set "FAILED=1"
+        echo ERROR: uv is still not available after install.
+      ) else (
+        echo uv found: "%UV_EXE%"
+      )
+      if "%FAILED%"=="1" exit /b 2
+      goto :install_source_after_desktop
+    )
   )
 )
 
@@ -231,8 +276,7 @@ if exist "%QBT_DEFAULT%" (
 REM --- Locate qBittorrent executable ---
 set "QBT_EXE="
 for /f "delims=" %%P in ('where qbittorrent.exe 2^>nul') do (
-  set "QBT_EXE=%%P"
-  goto :qbt_found
+  if not defined QBT_EXE set "QBT_EXE=%%P"
 )
 
 if exist "%ProgramFiles%\qBittorrent\qbittorrent.exe" set "QBT_EXE=%ProgramFiles%\qBittorrent\qbittorrent.exe"
@@ -321,7 +365,7 @@ if "%TORRENT_COUNT%"=="0" (
 
 REM --- If installing from source: create uv environment + install dependencies ---
 echo.
-if "%INSTALL_MODE%"=="1" (
+if "%DO_SOURCE%"=="0" (
   echo Desktop install selected; skipping Python environment setup.
   goto :after_python_setup
 )
@@ -385,12 +429,19 @@ REM if "%FAILED%"=="0" call :InstallNvidiaDriver
 
 echo.
 if "%FAILED%"=="0" (
-  echo Starting ComfyUI...
-  set "GIT_PYTHON_GIT_EXECUTABLE=%GIT_EXE%"
-  call "%UV_EXE%" run python main.py --enable-manager --base-directory "%COMFY_DATA%"
-  set "EXITCODE=%ERRORLEVEL%"
-  popd
-  exit /b %EXITCODE%
+  if "%RUN_SOURCE%"=="1" (
+    echo Starting ComfyUI...
+    set "GIT_PYTHON_GIT_EXECUTABLE=%GIT_EXE%"
+    call "%UV_EXE%" run python main.py --enable-manager --base-directory "%COMFY_DATA%"
+    set "EXITCODE=%ERRORLEVEL%"
+    popd
+    exit /b %EXITCODE%
+  ) else (
+    echo.
+    echo Source installed/updated. Desktop install remains the default launcher.
+    popd
+    goto :after_python_setup
+  )
 ) else (
   echo One or more steps failed. Fix errors above, then re-run.
   popd
@@ -433,8 +484,15 @@ for /f "tokens=1,2 delims=#" %%A in ("%URL%") do (
 if not defined URL_ONLY set "URL_ONLY=%URL%"
 
 if not defined FOLDER (
-  set "TMP=!URL_ONLY!"
-  for %%Z in (!TMP:/= !) do set "FOLDER=%%~Z"
+  REM Common case: https://github.com/OWNER/REPO(.git)
+  for /f "tokens=1-5 delims=/" %%a in ("!URL_ONLY!") do set "FOLDER=%%e"
+
+  REM Fallback: take the last token if the above didn't yield a name.
+  if not defined FOLDER (
+    set "URL_TOKENS=!URL_ONLY:/= !"
+    for %%Z in (!URL_TOKENS!) do set "FOLDER=%%Z"
+  )
+
   if /i "!FOLDER:~-4!"==".git" set "FOLDER=!FOLDER:~0,-4!"
 )
 
@@ -444,7 +502,7 @@ if not defined FOLDER (
 )
 
 set "DEST=%CUSTOM_NODES_DIR%\%FOLDER%"
-echo.
+echo(
 echo [custom_nodes] %FOLDER%
 echo   url: %URL_ONLY%
 if defined BRANCH echo   branch: %BRANCH%
@@ -606,27 +664,26 @@ exit /b 0
 :FindUv
 set "UV_EXE="
 for /f "delims=" %%P in ('where uv.exe 2^>nul') do (
-  set "UV_EXE=%%P"
-  goto :eof
+  if not defined UV_EXE set "UV_EXE=%%P"
 )
-for /f "delims=" %%P in ('where uv 2^>nul') do (
-  set "UV_EXE=%%P"
-  goto :eof
+if not defined UV_EXE (
+  for /f "delims=" %%P in ('where uv 2^>nul') do (
+    if not defined UV_EXE set "UV_EXE=%%P"
+  )
 )
-if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
-goto :eof
+if not defined UV_EXE if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
+exit /b 0
 
 :FindGit
 set "GIT_EXE="
 for /f "delims=" %%P in ('where git.exe 2^>nul') do (
-  set "GIT_EXE=%%P"
-  goto :eof
+  if not defined GIT_EXE set "GIT_EXE=%%P"
 )
 if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles%\Git\bin\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\bin\git.exe"
-goto :eof
+exit /b 0
 
 :QbtEnsureNoSubfolder
 set "QBT_INI=%AppData%\qBittorrent\qBittorrent.ini"
@@ -636,11 +693,12 @@ REM If already configured, do nothing (common on second run).
 if exist "%QBT_INI%" (
   findstr /i /c:"Session\TorrentContentLayout=NoSubfolder" "%QBT_INI%" >nul 2>nul
   if not errorlevel 1 (
-    echo.
-    echo qBittorrent already configured (NoSubfolder). Skipping config patch.
+    echo(
+    echo qBittorrent already configured ^(NoSubfolder^). Skipping config patch.
     exit /b 0
   )
 )
+
 
 REM If qBittorrent is currently running, it won't pick up ini changes.
 tasklist /fi "imagename eq qbittorrent.exe" 2>nul | find /i "qbittorrent.exe" >nul
@@ -653,41 +711,11 @@ if not errorlevel 1 (
   goto :QbtEnsureNoSubfolder
 )
 
+
 echo.
 echo Configuring qBittorrent to not create torrent subfolders...
-set "QBT_PS1=%TEMP%\qbt_set_layout.ps1"
->  "%QBT_PS1%" echo $p = Join-Path $env:APPDATA 'qBittorrent\qBittorrent.ini'
->> "%QBT_PS1%" echo $section = 'BitTorrent'
->> "%QBT_PS1%" echo $key = 'Session\TorrentContentLayout'
->> "%QBT_PS1%" echo $val = 'NoSubfolder'
->> "%QBT_PS1%" echo if (-not (Test-Path -LiteralPath $p)) { New-Item -ItemType File -Force -Path $p ^| Out-Null }
->> "%QBT_PS1%" echo $lines = Get-Content -LiteralPath $p -ErrorAction SilentlyContinue
->> "%QBT_PS1%" echo if ($null -eq $lines) { $lines = @() }
->> "%QBT_PS1%" echo $out = New-Object 'System.Collections.Generic.List[string]'
->> "%QBT_PS1%" echo $inSection = $false
->> "%QBT_PS1%" echo $seenSection = $false
->> "%QBT_PS1%" echo $setKey = $false
->> "%QBT_PS1%" echo foreach ($line in $lines) {
->> "%QBT_PS1%" echo   $trim = $line.Trim()
->> "%QBT_PS1%" echo   if ($trim.StartsWith('[') -and $trim.EndsWith(']')) {
->> "%QBT_PS1%" echo     if ($inSection -and -not $setKey) { $out.Add($key + '=' + $val); $setKey = $true }
->> "%QBT_PS1%" echo     $name = $trim.Substring(1, $trim.Length - 2)
->> "%QBT_PS1%" echo     $inSection = ($name -ieq $section)
->> "%QBT_PS1%" echo     if ($inSection) { $seenSection = $true }
->> "%QBT_PS1%" echo     $out.Add($line)
->> "%QBT_PS1%" echo     continue
->> "%QBT_PS1%" echo   }
->> "%QBT_PS1%" echo   if ($inSection -and ($trim -like ($key + '=*'))) { $out.Add($key + '=' + $val); $setKey = $true } else { $out.Add($line) }
->> "%QBT_PS1%" echo }
->> "%QBT_PS1%" echo if ($inSection -and -not $setKey) { $out.Add($key + '=' + $val); $setKey = $true }
->> "%QBT_PS1%" echo if (-not $seenSection) {
->> "%QBT_PS1%" echo   if ($out.Count -gt 0 -and $out[$out.Count-1] -ne '') { $out.Add('') }
->> "%QBT_PS1%" echo   $out.Add('[' + $section + ']')
->> "%QBT_PS1%" echo   $out.Add($key + '=' + $val)
->> "%QBT_PS1%" echo }
->> "%QBT_PS1%" echo [System.IO.File]::WriteAllLines($p, $out.ToArray(), (New-Object System.Text.UTF8Encoding($false)))
-
-powershell -NoProfile -ExecutionPolicy Bypass -File "%QBT_PS1%"
-del /q "%QBT_PS1%" >nul 2>nul
+echo.>> "%QBT_INI%"
+echo [BitTorrent]>> "%QBT_INI%"
+echo Session\TorrentContentLayout=NoSubfolder>> "%QBT_INI%"
 
 exit /b 0

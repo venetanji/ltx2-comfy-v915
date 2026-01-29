@@ -16,9 +16,19 @@ echo Shared ComfyUI data folder: "%COMFY_DATA%"
 set "COMFY_DIR=%DOCS_DIR%\comfyui-git"
 echo ComfyUI source folder: "%COMFY_DIR%"
 
+set "INSTALLER_DIR=%DOCS_DIR%\comfyui-git-installer"
+
 if not exist "%COMFY_DIR%\main.py" (
   echo ERROR: Could not find "%COMFY_DIR%\main.py".
   echo Run install_comfy.bat first - it bootstraps the installer repo and clones ComfyUI into Documents\comfyui-git.
+  if exist "%INSTALLER_DIR%\install_comfy.bat" (
+    echo(
+    set "RUN_INSTALLER="
+    set /p "RUN_INSTALLER=Run installer now? [Y/n]: "
+    if /i not "%RUN_INSTALLER%"=="N" (
+      call "%INSTALLER_DIR%\install_comfy.bat"
+    )
+  )
   pause
   exit /b 2
 )

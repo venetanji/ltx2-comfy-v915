@@ -629,6 +629,19 @@ if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\bin\git.exe" set "GIT_E
 goto :eof
 
 :QbtEnsureNoSubfolder
+set "QBT_INI=%AppData%\qBittorrent\qBittorrent.ini"
+if not exist "%AppData%\qBittorrent\" mkdir "%AppData%\qBittorrent" >nul 2>nul
+
+REM If already configured, do nothing (common on second run).
+if exist "%QBT_INI%" (
+  findstr /i /c:"Session\TorrentContentLayout=NoSubfolder" "%QBT_INI%" >nul 2>nul
+  if not errorlevel 1 (
+    echo.
+    echo qBittorrent already configured (NoSubfolder). Skipping config patch.
+    exit /b 0
+  )
+)
+
 REM If qBittorrent is currently running, it won't pick up ini changes.
 tasklist /fi "imagename eq qbittorrent.exe" 2>nul | find /i "qbittorrent.exe" >nul
 if not errorlevel 1 (
@@ -639,9 +652,6 @@ if not errorlevel 1 (
   pause >nul
   goto :QbtEnsureNoSubfolder
 )
-
-set "QBT_INI=%AppData%\qBittorrent\qBittorrent.ini"
-if not exist "%AppData%\qBittorrent\" mkdir "%AppData%\qBittorrent" >nul 2>nul
 
 echo.
 echo Configuring qBittorrent to not create torrent subfolders...

@@ -778,6 +778,12 @@ if exist "%COMFY_SRC%\.git" (
   if errorlevel 1 (
     echo WARNING: Failed to update ComfyUI repo; continuing.
   )
+  if not exist "%COMFY_SRC%\main.py" (
+    echo ERROR: ComfyUI checkout looks incomplete.
+    echo        Missing: "%COMFY_SRC%\main.py"
+    echo        Try deleting "%COMFY_SRC%" and re-running.
+    exit /b 1
+  )
   exit /b 0
 )
 
@@ -790,7 +796,16 @@ if exist "%COMFY_SRC%\" (
 echo Cloning ComfyUI into "%COMFY_SRC%"...
 call "%GIT_EXE%" clone --depth 1 "%COMFYUI_REPO_URL%" "%COMFY_SRC%"
 if errorlevel 1 (
+  echo WARNING: Shallow clone failed; retrying full clone...
+  call "%GIT_EXE%" clone "%COMFYUI_REPO_URL%" "%COMFY_SRC%"
+)
+if errorlevel 1 (
   echo ERROR: Failed to clone ComfyUI repo.
+  exit /b 1
+)
+if not exist "%COMFY_SRC%\main.py" (
+  echo ERROR: Clone completed but main.py is missing.
+  echo        Expected: "%COMFY_SRC%\main.py"
   exit /b 1
 )
 exit /b 0

@@ -2,7 +2,9 @@
 setlocal EnableExtensions EnableDelayedExpansion
 
 echo ============================================================
-echo ComfyUI install (source) + models via torrents
+echo ComfyUI install (university lab helper)
+echo - Installs into Documents (safe if run from a .zip)
+echo - Models download to a single shared folder
 echo ============================================================
 
 set "FAILED=0"
@@ -10,27 +12,55 @@ set "SCRIPT_DIR=%~dp0"
 set "UV_EXE="
 set "GIT_EXE="
 
-REM --- Install / locate uv ---
+REM --- Fixed install locations (do not depend on where the .bat lives) ---
+set "COMFY_DATA=%USERPROFILE%\Documents\ComfyUI"
+set "COMFY_GIT=%USERPROFILE%\Documents\comfyui-git"
+set "COMFY_SRC=%COMFY_GIT%"
+set "CUSTOM_NODES_LIST=%SCRIPT_DIR%custom_nodes.txt"
+set "CUSTOM_NODES_DIR=%COMFY_DATA%\custom_nodes"
+set "WORKFLOWS_DIR=%COMFY_DATA%\workflows"
+
+if not exist "%COMFY_DATA%\" mkdir "%COMFY_DATA%" >nul 2>nul
+if not exist "%CUSTOM_NODES_DIR%\" mkdir "%CUSTOM_NODES_DIR%" >nul 2>nul
+if not exist "%WORKFLOWS_DIR%\" mkdir "%WORKFLOWS_DIR%" >nul 2>nul
+
 echo.
-call :FindUv
-if not defined UV_EXE (
-  where winget >nul 2>nul
-  if errorlevel 1 (
-    set "FAILED=1"
-    echo ERROR: uv not found and winget is not available.
-    echo Install "App Installer" from Microsoft Store or install uv manually.
-  ) else (
-    echo Installing astral-sh.uv ^(source: winget^)...
-    winget install --id=astral-sh.uv -e --source winget --accept-source-agreements --accept-package-agreements
-    if errorlevel 1 echo WARNING: uv install via winget failed.
-    call :FindUv
+echo Shared ComfyUI data folder: "%COMFY_DATA%"
+echo Optional source checkout folder: "%COMFY_SRC%"
+
+REM --- Choose install mode (default: Desktop) ---
+set "INSTALL_MODE="
+echo.
+echo Choose install method:
+echo   1^) Desktop app (winget)              [recommended for students]
+echo   2^) Source (git clone + Python deps)  [advanced / for devs]
+set /p "INSTALL_MODE=Choice [1-2] (default 1): "
+if not defined INSTALL_MODE set "INSTALL_MODE=1"
+if not "%INSTALL_MODE%"=="1" if not "%INSTALL_MODE%"=="2" set "INSTALL_MODE=1"
+
+REM --- Install / locate uv (source install only) ---
+if "%INSTALL_MODE%"=="2" (
+  echo.
+  call :FindUv
+  if not defined UV_EXE (
+    where winget >nul 2>nul
+    if errorlevel 1 (
+      set "FAILED=1"
+      echo ERROR: uv not found and winget is not available.
+      echo Install "App Installer" from Microsoft Store or install uv manually.
+    ) else (
+      echo Installing astral-sh.uv ^(source: winget^)...
+      winget install --id=astral-sh.uv -e --source winget --accept-source-agreements --accept-package-agreements
+      if errorlevel 1 echo WARNING: uv install via winget failed.
+      call :FindUv
+    )
   )
-)
-if not defined UV_EXE (
-  set "FAILED=1"
-  echo ERROR: uv is still not available after install.
-) else (
-  echo uv found: "%UV_EXE%"
+  if not defined UV_EXE (
+    set "FAILED=1"
+    echo ERROR: uv is still not available after install.
+  ) else (
+    echo uv found: "%UV_EXE%"
+  )
 )
 
 REM --- Install / locate Git ---
@@ -62,32 +92,122 @@ if "%FAILED%"=="1" (
   exit /b 2
 )
 
-REM --- Clone ComfyUI from source ---
+REM --- Install ComfyUI Desktop (winget) OR clone ComfyUI source ---
+if "%INSTALL_MODE%"=="1" (
+  echo.
+  echo Installing ComfyUI Desktop via winget...
+  where winget >nul 2>nul
+  if errorlevel 1 (
+    set "FAILED=1"
+    echo ERROR: winget is not available (App Installer missing).
+  ) else (
+    winget install --id comfy.comfyui-desktop -e --source winget --accept-source-agreements --accept-package-agreements
+    if errorlevel 1 (
+      echo WARNING: winget install failed or app already installed.
+    )
+  )
+) else (
+  echo.
+  echo Preparing ComfyUI source checkout...
+  if exist "%COMFY_SRC%\" (
+    echo ComfyUI already exists at: "%COMFY_SRC%"
+    echo Updating repo...
+    call "%GIT_EXE%" -C "%COMFY_SRC%" pull
+    if errorlevel 1 (
+      set "FAILED=1"
+      echo ERROR: Failed to update ComfyUI repo.
+    )
+  ) else (
+    echo Cloning ComfyUI into Documents\comfyui-git...
+    call "%GIT_EXE%" clone --depth 1 https://github.com/Comfy-Org/ComfyUI "%COMFY_SRC%"
+    if errorlevel 1 (
+      set "FAILED=1"
+      echo ERROR: Failed to clone ComfyUI.
+    )
+  )
+
+  if not exist "%COMFY_SRC%\main.py" (
+    echo ERROR: ComfyUI repo not present or incomplete at: "%COMFY_SRC%"
+    echo Aborting.
+    exit /b 2
+  )
+
+  REM Ensure extra_model_paths.yaml points at the shared Documents folder.
+  REM This keeps model discovery consistent even if users forget --base-directory.
+  echo.
+  echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
+  >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
+  >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
+)
+
+REM --- Offer to install source alongside Desktop (useful on second run) ---
+if "%INSTALL_MODE%"=="1" (
+  if not exist "%COMFY_SRC%\main.py" (
+    echo.
+    echo Optional: install ComfyUI source checkout into "%COMFY_SRC%" as well?
+    set "INSTALL_SOURCE_TOO="
+    set /p "INSTALL_SOURCE_TOO=Install source too? [y/N]: "
+    if /i "%INSTALL_SOURCE_TOO%"=="Y" set "INSTALL_MODE=2"
+    if /i "%INSTALL_SOURCE_TOO%"=="YES" set "INSTALL_MODE=2"
+    if "%INSTALL_MODE%"=="2" goto :install_source_after_desktop
+  )
+)
+
+goto :after_install_choice
+
+:install_source_after_desktop
 echo.
-set "COMFY_DIR=%SCRIPT_DIR%ComfyUI"
-if exist "%COMFY_DIR%\" (
-  echo ComfyUI already exists at: "%COMFY_DIR%"
+echo Preparing ComfyUI source checkout...
+if exist "%COMFY_SRC%\" (
+  echo ComfyUI already exists at: "%COMFY_SRC%"
   echo Updating repo...
-  call "%GIT_EXE%" -C "%COMFY_DIR%" pull
+  call "%GIT_EXE%" -C "%COMFY_SRC%" pull
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to update ComfyUI repo.
   )
 ) else (
-  echo Cloning ComfyUI...
-  pushd "%SCRIPT_DIR%"
-  call "%GIT_EXE%" clone --depth 1 https://github.com/Comfy-Org/ComfyUI
+  echo Cloning ComfyUI into Documents\comfyui-git...
+  call "%GIT_EXE%" clone --depth 1 https://github.com/Comfy-Org/ComfyUI "%COMFY_SRC%"
   if errorlevel 1 (
     set "FAILED=1"
     echo ERROR: Failed to clone ComfyUI.
   )
-  popd
+)
+if exist "%COMFY_SRC%\main.py" (
+  echo.
+  echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
+  >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
+  >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: "%COMFY_DATA%"
 )
 
-if not exist "%COMFY_DIR%\main.py" (
-  echo ERROR: ComfyUI repo not present or incomplete at: "%COMFY_DIR%"
-  echo Aborting.
-  exit /b 2
+:after_install_choice
+
+REM --- Copy workflows into the shared workflows folder (used by Desktop) ---
+if exist "%SCRIPT_DIR%workflows\" (
+  echo.
+  echo Syncing workflows into "%WORKFLOWS_DIR%"...
+  xcopy "%SCRIPT_DIR%workflows\*" "%WORKFLOWS_DIR%\" /E /I /Y >nul
+) else (
+  echo.
+  echo No workflows folder found next to this script; skipping workflow copy.
+)
+
+REM --- Install/update custom nodes into the shared Documents folder ---
+echo.
+if not exist "%CUSTOM_NODES_LIST%" (
+  echo No "%CUSTOM_NODES_LIST%" found; skipping custom nodes.
+) else (
+  echo Installing custom nodes into: "%CUSTOM_NODES_DIR%"
+  for /f "usebackq delims=" %%L in ("%CUSTOM_NODES_LIST%") do (
+    set "LINE=%%L"
+    if defined LINE (
+      for /f "tokens=* delims= " %%A in ("!LINE!") do set "LINE=%%A"
+      if not "!LINE:~0,1!"=="#" if not "!LINE:~0,1!"==";" (
+        if defined LINE call :InstallCustomNode "!LINE!"
+      )
+    )
+  )
 )
 
 REM --- Install qBittorrent ---
@@ -131,7 +251,7 @@ REM --- Ensure qBittorrent layout config (no subfolder) ---
 REM This makes torrents extract their contents directly into the save path.
 if "%FAILED%"=="0" call :QbtEnsureNoSubfolder
 
-REM --- Torrent prompt (download models into ComfyUI folder) ---
+REM --- Torrent prompt (download models into the shared Documents folder) ---
 echo.
 echo Looking for .torrent files next to this script...
 set "TORRENT_COUNT=0"
@@ -175,19 +295,23 @@ if "%TORRENT_COUNT%"=="0" (
       REM Give the UI a moment to initialize so the next invocation is handled.
       timeout /t 2 /nobreak >nul
 
+      echo.
+      echo Opening the models folder in Explorer...
+      start "" explorer "%COMFY_DATA%"
+
       for %%S in (!TORRENT_SELECTION!) do (
         call set "TPATH=%%TORRENT[%%S]%%"
         call set "TNAME=%%TORRENT_NAME[%%S]%%"
         if defined TPATH (
-          echo Opening "!TNAME!" with save path "%COMFY_DIR%"...
-          start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DIR%" "!TPATH!"
+          echo Opening "!TNAME!" with save path "%COMFY_DATA%"...
+          start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "!TPATH!"
         ) else (
           echo WARNING: Invalid selection: %%S
         )
       )
       echo.
       echo NOTE: These torrents should contain a "models" folder.
-      echo       Saving into the ComfyUI folder merges into "%COMFY_DIR%\models".
+      echo       Saving into "%COMFY_DATA%" merges into "%COMFY_DATA%\models".
     ) else (
       set "FAILED=1"
       echo ERROR: qBittorrent not available; cannot open torrents.
@@ -195,10 +319,15 @@ if "%TORRENT_COUNT%"=="0" (
   )
 )
 
-REM --- Create uv environment + install dependencies ---
+REM --- If installing from source: create uv environment + install dependencies ---
 echo.
-echo Setting up Python environment in "%COMFY_DIR%"...
-pushd "%COMFY_DIR%"
+if "%INSTALL_MODE%"=="1" (
+  echo Desktop install selected; skipping Python environment setup.
+  goto :after_python_setup
+)
+
+echo Setting up Python environment in "%COMFY_SRC%"...
+pushd "%COMFY_SRC%"
 
 if exist ".venv\Scripts\python.exe" (
   echo Existing venv found at ".venv"; reusing.
@@ -233,7 +362,7 @@ if exist "requirements.txt" (
   )
 ) else (
   set "FAILED=1"
-  echo ERROR: requirements.txt not found in "%COMFY_DIR%".
+  echo ERROR: requirements.txt not found in "%COMFY_SRC%".
 )
 
 if exist "manager_requirements.txt" (
@@ -247,35 +376,18 @@ if exist "manager_requirements.txt" (
 )
 
 echo.
-echo Installing custom node: ComfyUI-Simple-Prompt-Batcher...
-if not exist "custom_nodes\" mkdir "custom_nodes" >nul 2>nul
-set "BATCHER_DIR=%CD%\custom_nodes\ComfyUI-Simple-Prompt-Batcher"
-if exist "%BATCHER_DIR%\.git" (
-  call "%GIT_EXE%" -C "%BATCHER_DIR%" pull
-  if errorlevel 1 (
-    set "FAILED=1"
-    echo ERROR: Failed to update ComfyUI-Simple-Prompt-Batcher.
-  )
-) else (
-  if exist "%BATCHER_DIR%\" (
-    echo WARNING: "%BATCHER_DIR%" exists but is not a git repo; skipping clone.
-  ) else (
-    call "%GIT_EXE%" clone --depth 1 https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git "%BATCHER_DIR%"
-    if errorlevel 1 (
-      set "FAILED=1"
-      echo ERROR: Failed to clone ComfyUI-Simple-Prompt-Batcher.
-    )
-  )
-)
+echo Custom nodes already installed into "%CUSTOM_NODES_DIR%".
 
 echo.
-if "%FAILED%"=="0" call :InstallNvidiaDriver
+echo NVIDIA driver install is disabled by default for lab machines.
+echo If you need it, re-enable the :InstallNvidiaDriver call in this script.
+REM if "%FAILED%"=="0" call :InstallNvidiaDriver
 
 echo.
 if "%FAILED%"=="0" (
   echo Starting ComfyUI...
   set "GIT_PYTHON_GIT_EXECUTABLE=%GIT_EXE%"
-  call "%UV_EXE%" run python main.py --enable-manager
+  call "%UV_EXE%" run python main.py --enable-manager --base-directory "%COMFY_DATA%"
   set "EXITCODE=%ERRORLEVEL%"
   popd
   exit /b %EXITCODE%
@@ -284,6 +396,78 @@ if "%FAILED%"=="0" (
   popd
   exit /b 2
 )
+
+:after_python_setup
+echo.
+echo Done.
+echo - Shared models folder: "%COMFY_DATA%\models"
+echo - Shared custom nodes folder: "%CUSTOM_NODES_DIR%"
+echo - Shared workflows folder: "%WORKFLOWS_DIR%"
+echo - If you installed Desktop, launch it from Start Menu.
+echo - If you installed Source, re-run this script to update.
+exit /b 0
+
+:InstallCustomNode
+REM Installs/updates a custom node from a line in custom_nodes.txt
+REM Supported formats:
+REM   https://github.com/OWNER/REPO.git
+REM   https://github.com/OWNER/REPO.git|FolderName
+REM   https://github.com/OWNER/REPO.git#branch
+REM   https://github.com/OWNER/REPO.git#branch|FolderName
+set "RAW=%~1"
+set "URL=%RAW%"
+set "FOLDER="
+set "BRANCH="
+
+REM Split optional folder name using |
+for /f "tokens=1,2 delims=|" %%A in ("%RAW%") do (
+  set "URL=%%~A"
+  set "FOLDER=%%~B"
+)
+
+REM Split optional branch using #
+for /f "tokens=1,2 delims=#" %%A in ("%URL%") do (
+  set "URL_ONLY=%%~A"
+  set "BRANCH=%%~B"
+)
+if not defined URL_ONLY set "URL_ONLY=%URL%"
+
+if not defined FOLDER (
+  set "TMP=!URL_ONLY!"
+  for %%Z in (!TMP:/= !) do set "FOLDER=%%~Z"
+  if /i "!FOLDER:~-4!"==".git" set "FOLDER=!FOLDER:~0,-4!"
+)
+
+if not defined FOLDER (
+  echo WARNING: Could not parse custom node line: %RAW%
+  goto :eof
+)
+
+set "DEST=%CUSTOM_NODES_DIR%\%FOLDER%"
+echo.
+echo [custom_nodes] %FOLDER%
+echo   url: %URL_ONLY%
+if defined BRANCH echo   branch: %BRANCH%
+echo   path: %DEST%
+
+if exist "%DEST%\.git" (
+  call "%GIT_EXE%" -C "%DEST%" pull
+  if errorlevel 1 echo WARNING: Failed to update %FOLDER%
+  goto :eof
+)
+
+if exist "%DEST%\" (
+  echo WARNING: "%DEST%" exists but is not a git repo; skipping.
+  goto :eof
+)
+
+if defined BRANCH (
+  call "%GIT_EXE%" clone --depth 1 --branch "%BRANCH%" "%URL_ONLY%" "%DEST%"
+) else (
+  call "%GIT_EXE%" clone --depth 1 "%URL_ONLY%" "%DEST%"
+)
+if errorlevel 1 echo WARNING: Failed to clone %FOLDER%
+goto :eof
 
 :InstallNvidiaDriver
 set "NVIDIA_TARGET=591.74"

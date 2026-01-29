@@ -9,6 +9,7 @@ echo ============================================================
 
 set "FAILED=0"
 set "EXITCODE=0"
+set "STRICT_CUSTOM_NODE_REQUIREMENTS=0"
 set "SCRIPT_DIR=%~dp0"
 set "UV_EXE="
 set "GIT_EXE="
@@ -487,6 +488,12 @@ if errorlevel 1 (
 )
 
 echo.
+echo Installing custom node Python requirements into the uv environment...
+for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
+  call :InstallCustomNodeRequirements "%%~fD"
+)
+
+echo.
 echo Custom nodes already installed into "%CUSTOM_NODES_DIR%".
 
 
@@ -807,6 +814,20 @@ if not exist "%COMFY_SRC%\main.py" (
   echo ERROR: Clone completed but main.py is missing.
   echo        Expected: "%COMFY_SRC%\main.py"
   exit /b 1
+)
+exit /b 0
+
+:InstallCustomNodeRequirements
+set "NODE_DIR=%~1"
+if not defined NODE_DIR exit /b 0
+if not exist "%NODE_DIR%\requirements.txt" exit /b 0
+
+echo(
+echo [custom_nodes] Installing requirements for "%~nx1"...
+call "%UV_EXE%" pip install -r "%NODE_DIR%\requirements.txt"
+if errorlevel 1 (
+  echo WARNING: Failed to install requirements for "%~nx1".
+  if "%STRICT_CUSTOM_NODE_REQUIREMENTS%"=="1" set "FAILED=1"
 )
 exit /b 0
 

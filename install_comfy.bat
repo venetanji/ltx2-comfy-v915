@@ -10,6 +10,7 @@ echo ============================================================
 set "FAILED=0"
 set "EXITCODE=0"
 set "STRICT_CUSTOM_NODE_REQUIREMENTS=0"
+set "ENABLE_NVIDIA_DRIVER_PROMPT=1"
 set "SCRIPT_DIR=%~dp0"
 set "UV_EXE="
 set "GIT_EXE="
@@ -291,6 +292,15 @@ if exist "%COMFY_SRC%\main.py" (
 
 :after_install_choice
 
+REM --- Ensure ComfyUI repo exists (so start_comfyui_git.bat works even if Desktop was chosen) ---
+echo.
+echo Ensuring ComfyUI source checkout exists...
+call :EnsureComfyUiRepo
+if errorlevel 1 (
+  echo WARNING: Could not prepare ComfyUI source checkout.
+  echo          start_comfyui_git.bat will not work until this is fixed.
+)
+
 REM --- Copy workflows into the shared workflows folder (used by Desktop) ---
 if exist "%SCRIPT_DIR%workflows\" (
   echo.
@@ -316,6 +326,17 @@ if not exist "%CUSTOM_NODES_LIST%" (
       )
     )
   )
+)
+
+REM --- Optional NVIDIA driver upgrade (restored) ---
+if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
+  echo.
+  echo Optional: NVIDIA driver upgrade
+  echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
+  set "DO_NVIDIA="
+  set /p "DO_NVIDIA=Install/upgrade NVIDIA driver now? [y/N]: "
+  if /i "%DO_NVIDIA%"=="Y" call :InstallNvidiaDriver
+  if /i "%DO_NVIDIA%"=="YES" call :InstallNvidiaDriver
 )
 
 REM --- Install qBittorrent ---
@@ -599,9 +620,6 @@ if errorlevel 1 echo WARNING: Failed to clone %FOLDER%
 goto :eof
 
 :InstallNvidiaDriver
-echo NVIDIA driver installation has been removed from this lab installer.
-exit /b 0
-
 set "NVIDIA_TARGET=591.74"
 set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.74/591.74-desktop-win10-win11-64bit-international-dch-whql.exe"
 set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.74.exe"
@@ -655,7 +673,7 @@ echo.
 echo NVIDIA driver installer not found locally.
 echo Choose how to obtain it:
 echo   1^) Skip NVIDIA driver install
-echo   2^) Download via web ^(Invoke-WebRequest; can be slow^)
+echo   2^) Download via web ^(Invoke-WebRequest^)
 if defined NVIDIA_TORRENT (
   echo   3^) Download via torrent: "%NVIDIA_TORRENT%"
 ) else (
@@ -663,13 +681,8 @@ if defined NVIDIA_TORRENT (
 )
 
 set "NVIDIA_GET="
-if defined NVIDIA_TORRENT (
-  set /p "NVIDIA_GET=Choice [1-3] (default 3): "
-  if not defined NVIDIA_GET set "NVIDIA_GET=3"
-) else (
-  set /p "NVIDIA_GET=Choice [1-3] (default 2): "
-  if not defined NVIDIA_GET set "NVIDIA_GET=2"
-)
+set /p "NVIDIA_GET=Choice [1-3] (default 2): "
+if not defined NVIDIA_GET set "NVIDIA_GET=2"
 
 if "%NVIDIA_GET%"=="1" (
   echo Skipping NVIDIA driver install.

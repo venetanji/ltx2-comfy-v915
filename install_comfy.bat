@@ -329,18 +329,19 @@ if not exist "%CUSTOM_NODES_LIST%" (
 )
 
 REM --- Desktop venv support: if Desktop created a venv under Documents\ComfyUI\.venv, install deps there too ---
+call :FindUv
 set "DESKTOP_VENV_PY=%COMFY_DATA%\.venv\Scripts\python.exe"
 if exist "%DESKTOP_VENV_PY%" (
   echo.
   echo Desktop venv detected: "%DESKTOP_VENV_PY%"
   echo Installing common custom-node dependencies into Desktop venv...
-  call :VenvPipInstall "%DESKTOP_VENV_PY%" "opencv-python imageio-ffmpeg"
+  call :DesktopVenvInstallPkgs "opencv-python imageio-ffmpeg"
 
   echo.
   echo Installing custom node Python requirements into Desktop venv...
   for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
     if exist "%%~fD\requirements.txt" (
-      call :VenvPipInstallReq "%DESKTOP_VENV_PY%" "%%~fD\requirements.txt" "%%~nxD"
+      call :DesktopVenvInstallReq "%%~fD\requirements.txt" "%%~nxD"
     )
   )
 ) else (
@@ -355,8 +356,8 @@ if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
   echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
   set "DO_NVIDIA="
   set /p "DO_NVIDIA=Install/upgrade NVIDIA driver now? [y/N]: "
-  if /i "%DO_NVIDIA%"=="Y" call :InstallNvidiaDriver
-  if /i "%DO_NVIDIA%"=="YES" call :InstallNvidiaDriver
+  if /i "!DO_NVIDIA!"=="Y" call :InstallNvidiaDriver
+  if /i "!DO_NVIDIA!"=="YES" call :InstallNvidiaDriver
 )
 
 REM --- Install qBittorrent ---
@@ -896,6 +897,44 @@ echo [custom_nodes] Desktop venv requirements: %REQ_NAME%
 if errorlevel 1 (
   echo WARNING: Failed to install Desktop venv requirements for %REQ_NAME%
 )
+exit /b 0
+
+:DesktopVenvInstallPkgs
+REM Installs packages into the Desktop-created venv at %COMFY_DATA%\.venv
+REM Prefer uv (Desktop uses uv), fall back to python -m pip.
+set "PKGS=%~1"
+if "%PKGS%"=="" exit /b 0
+
+if defined UV_EXE (
+  pushd "%COMFY_DATA%"
+  call "%UV_EXE%" pip install %PKGS%
+  popd
+  if errorlevel 1 echo WARNING: uv pip install failed in Desktop venv.
+  exit /b 0
+)
+
+call :VenvPipInstall "%DESKTOP_VENV_PY%" "%PKGS%"
+exit /b 0
+
+:DesktopVenvInstallReq
+REM Installs a requirements.txt into the Desktop-created venv at %COMFY_DATA%\.venv
+REM Prefer uv (Desktop uses uv), fall back to python -m pip.
+set "REQ_FILE=%~1"
+set "REQ_NAME=%~2"
+if not exist "%REQ_FILE%" exit /b 0
+if "%REQ_NAME%"=="" set "REQ_NAME=%REQ_FILE%"
+
+if defined UV_EXE (
+  echo(
+  echo [custom_nodes] Desktop venv requirements: %REQ_NAME%
+  pushd "%COMFY_DATA%"
+  call "%UV_EXE%" pip install -r "%REQ_FILE%"
+  popd
+  if errorlevel 1 echo WARNING: Failed to install Desktop venv requirements for %REQ_NAME%
+  exit /b 0
+)
+
+call :VenvPipInstallReq "%DESKTOP_VENV_PY%" "%REQ_FILE%" "%REQ_NAME%"
 exit /b 0
 
 :QbtEnsureNoSubfolder

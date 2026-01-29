@@ -561,7 +561,7 @@ echo - Shared custom nodes folder: "%CUSTOM_NODES_DIR%"
 echo - Shared workflows folder: "%WORKFLOWS_DIR%"
 echo - If you installed Desktop, launch it from Start Menu.
 echo - If you installed Source, re-run this script to update.
-exit /b 0
+set "EXITCODE=0" & goto :Exit
 
 :InstallCustomNode
 REM Installs/updates a custom node from a line in custom_nodes.txt
@@ -987,7 +987,15 @@ exit /b 0
 
 :Exit
 if not defined EXITCODE set "EXITCODE=0"
-if not "%EXITCODE%"=="0" (
+if "%EXITCODE%"=="0" (
+  echo.
+  echo ============================================================
+  echo SUCCESS: Installation completed.
+  echo ============================================================
+  echo.
+  echo Press any key to close...
+  pause >nul
+) else (
   echo.
   echo Installer failed with exit code %EXITCODE%.
   echo.

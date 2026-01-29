@@ -1,44 +1,9 @@
 {
   "id": "3964f896-cd37-46f8-8eec-6593d26f6e3b",
   "revision": 0,
-  "last_node_id": 43,
-  "last_link_id": 87,
+  "last_node_id": 44,
+  "last_link_id": 89,
   "nodes": [
-    {
-      "id": 12,
-      "type": "DualCLIPLoader",
-      "pos": [
-        -3024.7241482682393,
-        6672.496520453846
-      ],
-      "size": [
-        270,
-        130
-      ],
-      "flags": {},
-      "order": 0,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "CLIP",
-          "type": "CLIP",
-          "links": [
-            11,
-            12
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "DualCLIPLoader"
-      },
-      "widgets_values": [
-        "gemma_3_12B_it_fp8_e4m3fn.safetensors",
-        "ltx-2-19b-embeddings_connector_dev_bf16.safetensors",
-        "ltxv",
-        "default"
-      ]
-    },
     {
       "id": 15,
       "type": "RandomNoise",
@@ -51,7 +16,7 @@
         82
       ],
       "flags": {},
-      "order": 1,
+      "order": 0,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -83,7 +48,7 @@
         106
       ],
       "flags": {},
-      "order": 21,
+      "order": 22,
       "mode": 0,
       "inputs": [
         {
@@ -143,7 +108,7 @@
         58
       ],
       "flags": {},
-      "order": 2,
+      "order": 1,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -174,7 +139,7 @@
         98
       ],
       "flags": {},
-      "order": 19,
+      "order": 21,
       "mode": 0,
       "inputs": [
         {
@@ -221,7 +186,7 @@
         202
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -247,79 +212,6 @@
       ]
     },
     {
-      "id": 32,
-      "type": "LoraLoaderModelOnly",
-      "pos": [
-        -2728.105458333564,
-        5939.929206732831
-      ],
-      "size": [
-        270,
-        82
-      ],
-      "flags": {},
-      "order": 12,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "model",
-          "type": "MODEL",
-          "link": 57
-        }
-      ],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            56
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoraLoaderModelOnly"
-      },
-      "widgets_values": [
-        "ltx-2-19b-distilled-lora-384.safetensors",
-        -0.4
-      ]
-    },
-    {
-      "id": 30,
-      "type": "Reroute",
-      "pos": [
-        -2404.7000995092035,
-        5939.520836253263
-      ],
-      "size": [
-        75,
-        26
-      ],
-      "flags": {},
-      "order": 16,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "",
-          "type": "*",
-          "link": 56
-        }
-      ],
-      "outputs": [
-        {
-          "name": "",
-          "type": "MODEL",
-          "links": [
-            54
-          ]
-        }
-      ],
-      "properties": {
-        "showOutputText": false,
-        "horizontal": false
-      }
-    },
-    {
       "id": 35,
       "type": "LTXVEmptyLatentAudio",
       "pos": [
@@ -331,7 +223,7 @@
         106
       ],
       "flags": {},
-      "order": 17,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
@@ -387,7 +279,7 @@
         58
       ],
       "flags": {},
-      "order": 13,
+      "order": 11,
       "mode": 0,
       "inputs": [
         {
@@ -427,7 +319,7 @@
         46
       ],
       "flags": {},
-      "order": 22,
+      "order": 23,
       "mode": 0,
       "inputs": [
         {
@@ -469,7 +361,7 @@
         222
       ],
       "flags": {},
-      "order": 23,
+      "order": 24,
       "mode": 0,
       "inputs": [
         {
@@ -517,7 +409,7 @@
         46
       ],
       "flags": {},
-      "order": 24,
+      "order": 25,
       "mode": 0,
       "inputs": [
         {
@@ -558,7 +450,7 @@
         78
       ],
       "flags": {},
-      "order": 25,
+      "order": 26,
       "mode": 0,
       "inputs": [
         {
@@ -609,7 +501,7 @@
         246.5
       ],
       "flags": {},
-      "order": 26,
+      "order": 27,
       "mode": 0,
       "inputs": [
         {
@@ -638,7 +530,7 @@
         200
       ],
       "flags": {},
-      "order": 11,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
@@ -675,7 +567,7 @@
         82
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -713,7 +605,7 @@
         78
       ],
       "flags": {},
-      "order": 15,
+      "order": 18,
       "mode": 0,
       "inputs": [
         {
@@ -770,7 +662,7 @@
         154
       ],
       "flags": {},
-      "order": 5,
+      "order": 4,
       "mode": 0,
       "inputs": [
         {
@@ -852,7 +744,7 @@
         130
       ],
       "flags": {},
-      "order": 14,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -895,7 +787,7 @@
         122
       ],
       "flags": {},
-      "order": 18,
+      "order": 17,
       "mode": 0,
       "inputs": [
         {
@@ -943,7 +835,7 @@
         314
       ],
       "flags": {},
-      "order": 6,
+      "order": 5,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -980,7 +872,7 @@
         200
       ],
       "flags": {},
-      "order": 10,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
@@ -1006,40 +898,6 @@
       ]
     },
     {
-      "id": 37,
-      "type": "PrimitiveInt",
-      "pos": [
-        -3175.3304262012152,
-        7243.918595638981
-      ],
-      "size": [
-        386.7901562483439,
-        111.54940524053836
-      ],
-      "flags": {},
-      "order": 7,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "INT",
-          "type": "INT",
-          "links": [
-            71,
-            77
-          ]
-        }
-      ],
-      "title": "Number of frames (Video length)",
-      "properties": {
-        "Node name for S&R": "PrimitiveInt"
-      },
-      "widgets_values": [
-        -116899430983382,
-        "randomize"
-      ]
-    },
-    {
       "id": 22,
       "type": "VAELoaderKJ",
       "pos": [
@@ -1051,7 +909,7 @@
         116.51071158629566
       ],
       "flags": {},
-      "order": 8,
+      "order": 6,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1085,7 +943,7 @@
         116.51071158629566
       ],
       "flags": {},
-      "order": 9,
+      "order": 7,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1105,6 +963,186 @@
         "LTX2_video_vae_bf16.safetensors",
         "main_device",
         "bf16"
+      ]
+    },
+    {
+      "id": 37,
+      "type": "PrimitiveInt",
+      "pos": [
+        -3175.3304262012152,
+        7243.918595638981
+      ],
+      "size": [
+        386.7901562483439,
+        111.54940524053836
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "INT",
+          "type": "INT",
+          "links": [
+            71,
+            77
+          ]
+        }
+      ],
+      "title": "Number of frames (Video length)",
+      "properties": {
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        480,
+        "fixed"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "DualCLIPLoader",
+      "pos": [
+        -3024.7241482682393,
+        6672.496520453846
+      ],
+      "size": [
+        270,
+        130
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "CLIP",
+          "type": "CLIP",
+          "links": [
+            11,
+            12
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "DualCLIPLoader"
+      },
+      "widgets_values": [
+        "gemma_3_12B_it_fp8_e4m3fn.safetensors",
+        "ltx-2-19b-embeddings_connector_distill_bf16.safetensors",
+        "ltxv",
+        "default"
+      ]
+    },
+    {
+      "id": 30,
+      "type": "Reroute",
+      "pos": [
+        -2148.0264322397684,
+        5939.520836253263
+      ],
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 19,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 89
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "MODEL",
+          "links": [
+            54
+          ]
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 32,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -2728.105458333564,
+        5939.929206732831
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 10,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 57
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            88
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "ltx-2-19b-distilled-lora-384.safetensors",
+        -0.4
+      ]
+    },
+    {
+      "id": 44,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -2432.301667173342,
+        5942.805960625765
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 15,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 88
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            89
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "ltx-2-19b-lora-camera-control-dolly-out.safetensors",
+        -0.4
       ]
     }
   ],
@@ -1226,14 +1264,6 @@
       30,
       0,
       25,
-      0,
-      "MODEL"
-    ],
-    [
-      56,
-      32,
-      0,
-      30,
       0,
       "MODEL"
     ],
@@ -1380,16 +1410,32 @@
       42,
       0,
       "VAE"
+    ],
+    [
+      88,
+      32,
+      0,
+      44,
+      0,
+      "MODEL"
+    ],
+    [
+      89,
+      44,
+      0,
+      30,
+      0,
+      "MODEL"
     ]
   ],
   "groups": [],
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.6950458349575658,
+      "scale": 0.46742370472749295,
       "offset": [
-        3098.7325540447264,
-        -6169.265716309011
+        3754.6136647288176,
+        -5519.833185036848
       ]
     },
     "frontendVersion": "1.37.11",

@@ -13,7 +13,7 @@ set "COMFY_DIR=%REPO_DIR%\ComfyUI"
 
 if not exist "%COMFY_DIR%\main.py" (
   echo ERROR: Could not find "%COMFY_DIR%\main.py".
-  echo Run install_comfy.bat first (it bootstraps the repo into Documents\comfyui-git).
+  echo Run install_comfy.bat first - it bootstraps the repo into Documents\comfyui-git.
   pause
   exit /b 2
 )
@@ -31,7 +31,7 @@ if not defined UV_EXE if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" se
 
 if not defined UV_EXE (
   echo ERROR: uv was not found.
-  echo Install it via install_comfy.bat (Source mode) or winget: astral-sh.uv
+  echo Install it via install_comfy.bat ^(Source mode^) or winget: astral-sh.uv
   pause
   exit /b 2
 )

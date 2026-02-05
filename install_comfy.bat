@@ -404,17 +404,18 @@ REM --- Torrent step (download models into the shared Documents folder) ---
 echo.
 call :HandleTorrents
 
-REM --- Optional NVIDIA driver upgrade (restored) ---
-if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
-  echo.
-  echo Optional: NVIDIA driver upgrade
-  echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
-  set "DO_NVIDIA=N"
-  echo (Auto-selecting default in 5 seconds...)
-  choice /c YN /n /t 5 /d N /m "Install/upgrade NVIDIA driver now? [Y/N] (default N): "
-  if errorlevel 2 (set "DO_NVIDIA=N") else (set "DO_NVIDIA=Y")
-  if /i "!DO_NVIDIA!"=="Y" call :InstallNvidiaDriver
-)
+REM --- NVIDIA driver upgrade (defaults to automatic when an update is needed) ---
+REM Behavior:
+REM   - If COMFY_DISABLE_NVIDIA_DRIVER=1: skip.
+REM   - Otherwise: call :InstallNvidiaDriver, which will detect NVIDIA presence and skip if already up to date.
+if /i "%COMFY_DISABLE_NVIDIA_DRIVER%"=="1" goto :AfterNvidiaDriver
+
+echo.
+echo NVIDIA driver check 591.86...
+echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
+call :InstallNvidiaDriver
+
+:AfterNvidiaDriver
 
 REM --- If installing from source: create uv environment + install dependencies ---
 echo.
@@ -607,6 +608,7 @@ set "NVIDIA_TARGET=591.86"
 set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.86/591.86-desktop-win10-win11-64bit-international-dch-whql.exe"
 set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.86.exe"
 set "NVIDIA_DL_DIR=%TEMP%\nvidia-driver-%NVIDIA_TARGET%"
+set "NVIDIA_LOCAL_EXE=%SCRIPT_DIR%591.86-desktop-win10-win11-64bit-international-dch-whql.exe"
 
 echo Installing NVIDIA driver (%NVIDIA_TARGET%)...
 
@@ -646,6 +648,9 @@ if /i "%NVIDIA_INSTALLED%"=="UNKNOWN" (
   )
 )
 
+REM Prefer a locally-provided installer next to this script (avoids re-downloading).
+if exist "%NVIDIA_LOCAL_EXE%" set "NVIDIA_EXE=%NVIDIA_LOCAL_EXE%"
+
 if exist "%NVIDIA_EXE%" goto :nvidia_run
 
 REM Locate an optional NVIDIA driver torrent next to the script.
@@ -664,7 +669,9 @@ if defined NVIDIA_TORRENT (
 )
 
 set "NVIDIA_GET="
-set /p "NVIDIA_GET=Choice [1-3] (default 2): "
+echo (Auto-selecting default in 5 seconds...)
+choice /c 123 /n /t 5 /d 2 /m "Choice [1-3] (default 2): "
+set "NVIDIA_GET=%ERRORLEVEL%"
 if not defined NVIDIA_GET set "NVIDIA_GET=2"
 
 if "%NVIDIA_GET%"=="1" (
@@ -728,7 +735,12 @@ if not exist "%NVIDIA_EXE%" (
 echo Launching NVIDIA driver installer...
 echo IMPORTANT: DO NOT REBOOT this computer. These machines are reset on reboot.
 echo If the installer requests a reboot, close it and proceed without rebooting.
-start "" /wait "%NVIDIA_EXE%"
+echo Attempting quiet install...
+start "" /wait "%NVIDIA_EXE%" -s
+if errorlevel 1 (
+  echo WARNING: Quiet install did not report success. Launching interactive installer...
+  start "" /wait "%NVIDIA_EXE%"
+)
 exit /b 0
 
 :FindUv

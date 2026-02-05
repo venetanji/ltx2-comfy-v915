@@ -11,11 +11,12 @@
 # https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git
 
 https://github.com/kijai/ComfyUI-KJNodes
-https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher.git
+https://github.com/ai-joe-git/ComfyUI-Simple-Prompt-Batcher
 https://github.com/Kosinkadink/ComfyUI-VideoHelperSuite
 https://github.com/Lightricks/ComfyUI-LTXVideo
 https://github.com/city96/ComfyUI-GGUF
-https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes.git
+https://github.com/Suzie1/ComfyUI_Comfyroll_CustomNodes
 https://github.com/evanspearman/ComfyMath
-https://github.com/pythongosssss/ComfyUI-Custom-Scripts.git
+https://github.com/pythongosssss/ComfyUI-Custom-Scripts
 https://github.com/flybirdxx/ComfyUI-QwenTTS
+https://github.com/kijai/ComfyUI-MelBandRoFormer

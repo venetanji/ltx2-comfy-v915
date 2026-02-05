@@ -404,16 +404,18 @@ REM --- Torrent step (download models into the shared Documents folder) ---
 echo.
 call :HandleTorrents
 
-REM --- Optional NVIDIA driver upgrade (restored) ---
-if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
+REM --- NVIDIA driver upgrade (defaults to automatic when an update is needed) ---
+REM Behavior:
+REM   - If COMFY_DISABLE_NVIDIA_DRIVER=1: skip.
+REM   - Otherwise: call :InstallNvidiaDriver, which will detect NVIDIA presence and skip if already up to date.
+if /i "%COMFY_DISABLE_NVIDIA_DRIVER%"=="1" (
   echo.
-  echo Optional: NVIDIA driver upgrade
+  echo NVIDIA driver install disabled (COMFY_DISABLE_NVIDIA_DRIVER=1); skipping.
+) else (
+  echo.
+  echo NVIDIA driver check (%NVIDIA_TARGET%)...
   echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
-  set "DO_NVIDIA=N"
-  echo (Auto-selecting default in 5 seconds...)
-  choice /c YN /n /t 5 /d N /m "Install/upgrade NVIDIA driver now? [Y/N] (default N): "
-  if errorlevel 2 (set "DO_NVIDIA=N") else (set "DO_NVIDIA=Y")
-  if /i "!DO_NVIDIA!"=="Y" call :InstallNvidiaDriver
+  call :InstallNvidiaDriver
 )
 
 REM --- If installing from source: create uv environment + install dependencies ---

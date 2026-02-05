@@ -108,8 +108,8 @@
       },
       "widgets_values": [
         "",
-        1024,
-        1024,
+        1280,
+        720,
         432262096973490,
         null,
         "flux-2-klein-4b-fp8.safetensors",

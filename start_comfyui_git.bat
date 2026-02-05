@@ -56,7 +56,7 @@ if not exist "%COMFY_DATA%" (
 )
 
 pushd "%COMFY_DIR%"
-"%UV_EXE%" run python main.py --port 8188 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%"
+"%UV_EXE%" run python main.py --port 8188 --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%"
 set "EXITCODE=%ERRORLEVEL%"
 popd
 

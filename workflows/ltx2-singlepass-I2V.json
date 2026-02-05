@@ -1,8 +1,8 @@
 {
   "id": "3964f896-cd37-46f8-8eec-6593d26f6e3b",
   "revision": 0,
-  "last_node_id": 44,
-  "last_link_id": 89,
+  "last_node_id": 55,
+  "last_link_id": 99,
   "nodes": [
     {
       "id": 15,
@@ -32,7 +32,7 @@
         "Node name for S&R": "RandomNoise"
       },
       "widgets_values": [
-        1025837771785810,
+        709480271902383,
         "randomize"
       ]
     },
@@ -48,7 +48,7 @@
         106
       ],
       "flags": {},
-      "order": 22,
+      "order": 24,
       "mode": 0,
       "inputs": [
         {
@@ -139,13 +139,13 @@
         98
       ],
       "flags": {},
-      "order": 21,
+      "order": 23,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 54
+          "link": 99
         },
         {
           "name": "positive",
@@ -175,43 +175,6 @@
       ]
     },
     {
-      "id": 2,
-      "type": "GGUFLoaderKJ",
-      "pos": [
-        -3079.9862317758225,
-        5942.355310942733
-      ],
-      "size": [
-        312.095703125,
-        202
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "MODEL",
-          "type": "MODEL",
-          "links": [
-            57
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "GGUFLoaderKJ"
-      },
-      "widgets_values": [
-        "ltx-2-19b-distilled_Q4_K_M.gguf",
-        "none",
-        "default",
-        "default",
-        false,
-        false,
-        "sageattn"
-      ]
-    },
-    {
       "id": 35,
       "type": "LTXVEmptyLatentAudio",
       "pos": [
@@ -223,7 +186,7 @@
         106
       ],
       "flags": {},
-      "order": 16,
+      "order": 15,
       "mode": 0,
       "inputs": [
         {
@@ -279,7 +242,7 @@
         58
       ],
       "flags": {},
-      "order": 11,
+      "order": 10,
       "mode": 0,
       "inputs": [
         {
@@ -319,7 +282,7 @@
         46
       ],
       "flags": {},
-      "order": 23,
+      "order": 25,
       "mode": 0,
       "inputs": [
         {
@@ -350,54 +313,6 @@
       "widgets_values": []
     },
     {
-      "id": 16,
-      "type": "LTXVSpatioTemporalTiledVAEDecode",
-      "pos": [
-        -818.0884718458133,
-        6252.715046746141
-      ],
-      "size": [
-        409.0142578125,
-        222
-      ],
-      "flags": {},
-      "order": 24,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "vae",
-          "type": "VAE",
-          "link": 17
-        },
-        {
-          "name": "latents",
-          "type": "LATENT",
-          "link": 27
-        }
-      ],
-      "outputs": [
-        {
-          "name": "image",
-          "type": "IMAGE",
-          "links": [
-            18
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LTXVSpatioTemporalTiledVAEDecode"
-      },
-      "widgets_values": [
-        4,
-        4,
-        16,
-        4,
-        false,
-        "auto",
-        "auto"
-      ]
-    },
-    {
       "id": 24,
       "type": "LTXVAudioVAEDecode",
       "pos": [
@@ -409,7 +324,7 @@
         46
       ],
       "flags": {},
-      "order": 25,
+      "order": 27,
       "mode": 0,
       "inputs": [
         {
@@ -450,7 +365,7 @@
         78
       ],
       "flags": {},
-      "order": 26,
+      "order": 29,
       "mode": 0,
       "inputs": [
         {
@@ -490,35 +405,6 @@
       ]
     },
     {
-      "id": 18,
-      "type": "SaveVideo",
-      "pos": [
-        27.512965443951718,
-        6491.074704311294
-      ],
-      "size": [
-        270,
-        246.5
-      ],
-      "flags": {},
-      "order": 27,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "video",
-          "type": "VIDEO",
-          "link": 19
-        }
-      ],
-      "outputs": [],
-      "properties": {},
-      "widgets_values": [
-        "video/ComfyUI",
-        "auto",
-        "auto"
-      ]
-    },
-    {
       "id": 11,
       "type": "CLIPTextEncode",
       "pos": [
@@ -530,7 +416,7 @@
         200
       ],
       "flags": {},
-      "order": 14,
+      "order": 12,
       "mode": 0,
       "inputs": [
         {
@@ -567,7 +453,7 @@
         82
       ],
       "flags": {},
-      "order": 3,
+      "order": 2,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -605,7 +491,7 @@
         78
       ],
       "flags": {},
-      "order": 18,
+      "order": 16,
       "mode": 0,
       "inputs": [
         {
@@ -662,7 +548,7 @@
         154
       ],
       "flags": {},
-      "order": 4,
+      "order": 3,
       "mode": 0,
       "inputs": [
         {
@@ -704,7 +590,7 @@
         46
       ],
       "flags": {},
-      "order": 20,
+      "order": 19,
       "mode": 0,
       "inputs": [
         {
@@ -744,7 +630,7 @@
         130
       ],
       "flags": {},
-      "order": 12,
+      "order": 13,
       "mode": 0,
       "inputs": [
         {
@@ -798,7 +684,7 @@
         {
           "name": "image",
           "type": "IMAGE",
-          "link": 85
+          "link": 93
         },
         {
           "name": "latent",
@@ -824,80 +710,6 @@
       ]
     },
     {
-      "id": 43,
-      "type": "LoadImage",
-      "pos": [
-        -2221.4760088314106,
-        6627.00584421935
-      ],
-      "size": [
-        282.798828125,
-        314
-      ],
-      "flags": {},
-      "order": 5,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            85
-          ]
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImage"
-      },
-      "widgets_values": [
-        "ComfyUI_00033_.png",
-        "image"
-      ]
-    },
-    {
-      "id": 10,
-      "type": "CLIPTextEncode",
-      "pos": [
-        -2655.965205482096,
-        6528.806396251634
-      ],
-      "size": [
-        400,
-        200
-      ],
-      "flags": {},
-      "order": 13,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "clip",
-          "type": "CLIP",
-          "link": 11
-        }
-      ],
-      "outputs": [
-        {
-          "name": "CONDITIONING",
-          "type": "CONDITIONING",
-          "links": [
-            80
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "CLIPTextEncode"
-      },
-      "widgets_values": [
-        "The person rides a rollercoster on bizarre landscape into the sea and up into the sky"
-      ]
-    },
-    {
       "id": 22,
       "type": "VAELoaderKJ",
       "pos": [
@@ -909,7 +721,7 @@
         116.51071158629566
       ],
       "flags": {},
-      "order": 6,
+      "order": 4,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -943,7 +755,7 @@
         116.51071158629566
       ],
       "flags": {},
-      "order": 7,
+      "order": 5,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -966,37 +778,159 @@
       ]
     },
     {
-      "id": 37,
-      "type": "PrimitiveInt",
+      "id": 16,
+      "type": "LTXVSpatioTemporalTiledVAEDecode",
       "pos": [
-        -3175.3304262012152,
-        7243.918595638981
+        -818.0884718458133,
+        6252.715046746141
       ],
       "size": [
-        386.7901562483439,
-        111.54940524053836
+        409.0142578125,
+        222
       ],
       "flags": {},
-      "order": 8,
+      "order": 26,
       "mode": 0,
-      "inputs": [],
+      "inputs": [
+        {
+          "name": "vae",
+          "type": "VAE",
+          "link": 17
+        },
+        {
+          "name": "latents",
+          "type": "LATENT",
+          "link": 27
+        }
+      ],
       "outputs": [
         {
-          "name": "INT",
-          "type": "INT",
+          "name": "image",
+          "type": "IMAGE",
           "links": [
-            71,
-            77
+            18,
+            91
           ]
         }
       ],
-      "title": "Number of frames (Video length)",
       "properties": {
-        "Node name for S&R": "PrimitiveInt"
+        "Node name for S&R": "LTXVSpatioTemporalTiledVAEDecode"
       },
       "widgets_values": [
-        480,
-        "fixed"
+        4,
+        4,
+        16,
+        4,
+        false,
+        "auto",
+        "auto"
+      ]
+    },
+    {
+      "id": 46,
+      "type": "GetImageRangeFromBatch",
+      "pos": [
+        -315.5818318499928,
+        6165.328903265137
+      ],
+      "size": [
+        349.7056640625,
+        102
+      ],
+      "flags": {},
+      "order": 28,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "shape": 7,
+          "type": "IMAGE",
+          "link": 91
+        },
+        {
+          "name": "masks",
+          "shape": 7,
+          "type": "MASK",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            92
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "title": "Save last image",
+      "properties": {
+        "Node name for S&R": "GetImageRangeFromBatch"
+      },
+      "widgets_values": [
+        0,
+        1
+      ]
+    },
+    {
+      "id": 45,
+      "type": "SaveImage",
+      "pos": [
+        100.8974154760844,
+        6164.712370951378
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 30,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 92
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "lastframe"
+      ]
+    },
+    {
+      "id": 18,
+      "type": "SaveVideo",
+      "pos": [
+        27.512965443951718,
+        6491.074704311294
+      ],
+      "size": [
+        270,
+        246.5
+      ],
+      "flags": {},
+      "order": 31,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "video",
+          "type": "VIDEO",
+          "link": 19
+        }
+      ],
+      "outputs": [],
+      "properties": {},
+      "widgets_values": [
+        "ltx2-singlepass-i2v",
+        "auto",
+        "auto"
       ]
     },
     {
@@ -1011,7 +945,7 @@
         130
       ],
       "flags": {},
-      "order": 9,
+      "order": 6,
       "mode": 0,
       "inputs": [],
       "outputs": [
@@ -1035,59 +969,58 @@
       ]
     },
     {
-      "id": 30,
-      "type": "Reroute",
+      "id": 37,
+      "type": "PrimitiveInt",
       "pos": [
-        -2148.0264322397684,
-        5939.520836253263
+        -3175.3304262012152,
+        7243.918595638981
       ],
       "size": [
-        75,
-        26
+        386.7901562483439,
+        111.54940524053836
       ],
       "flags": {},
-      "order": 19,
+      "order": 7,
       "mode": 0,
-      "inputs": [
-        {
-          "name": "",
-          "type": "*",
-          "link": 89
-        }
-      ],
+      "inputs": [],
       "outputs": [
         {
-          "name": "",
-          "type": "MODEL",
+          "name": "INT",
+          "type": "INT",
           "links": [
-            54
+            71,
+            77
           ]
         }
       ],
+      "title": "Number of frames (Video length)",
       "properties": {
-        "showOutputText": false,
-        "horizontal": false
-      }
+        "Node name for S&R": "PrimitiveInt"
+      },
+      "widgets_values": [
+        240,
+        "fixed"
+      ]
     },
     {
-      "id": 32,
+      "id": 50,
       "type": "LoraLoaderModelOnly",
       "pos": [
-        -2728.105458333564,
-        5939.929206732831
+        -2457.9863904886665,
+        6004.184287747963
       ],
       "size": [
         270,
         82
       ],
       "flags": {},
-      "order": 10,
+      "order": 21,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 57
+          "link": 94
         }
       ],
       "outputs": [
@@ -1095,10 +1028,50 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            88
+            96
           ]
         }
       ],
+      "title": "Camera LoRA",
+      "properties": {
+        "Node name for S&R": "LoraLoaderModelOnly"
+      },
+      "widgets_values": [
+        "ltx-2-19b-lora-camera-control-dolly-out.safetensors",
+        1
+      ]
+    },
+    {
+      "id": 51,
+      "type": "LoraLoaderModelOnly",
+      "pos": [
+        -2783.765883600859,
+        6004.176691953389
+      ],
+      "size": [
+        270,
+        82
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 95
+        }
+      ],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            94
+          ]
+        }
+      ],
+      "title": "Dedistill LoRA",
       "properties": {
         "Node name for S&R": "LoraLoaderModelOnly"
       },
@@ -1108,24 +1081,62 @@
       ]
     },
     {
-      "id": 44,
-      "type": "LoraLoaderModelOnly",
+      "id": 53,
+      "type": "LTXVChunkFeedForward",
       "pos": [
-        -2432.301667173342,
-        5942.805960625765
+        -3132.0604451734016,
+        6005.353489286496
+      ],
+      "size": [
+        272.35703125,
+        82
+      ],
+      "flags": {},
+      "order": 18,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "link": 97
+        }
+      ],
+      "outputs": [
+        {
+          "name": "model",
+          "type": "MODEL",
+          "links": [
+            95
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LTXVChunkFeedForward"
+      },
+      "widgets_values": [
+        4,
+        4096
+      ]
+    },
+    {
+      "id": 54,
+      "type": "PathchSageAttentionKJ",
+      "pos": [
+        -3458.3998726423865,
+        6006.098604679317
       ],
       "size": [
         270,
         82
       ],
       "flags": {},
-      "order": 15,
+      "order": 14,
       "mode": 0,
       "inputs": [
         {
           "name": "model",
           "type": "MODEL",
-          "link": 88
+          "link": 98
         }
       ],
       "outputs": [
@@ -1133,16 +1144,158 @@
           "name": "MODEL",
           "type": "MODEL",
           "links": [
-            89
+            97
           ]
         }
       ],
       "properties": {
-        "Node name for S&R": "LoraLoaderModelOnly"
+        "Node name for S&R": "PathchSageAttentionKJ"
       },
       "widgets_values": [
-        "ltx-2-19b-lora-camera-control-dolly-out.safetensors",
-        -0.4
+        "sageattn_qk_int8_pv_fp16_triton",
+        true
+      ]
+    },
+    {
+      "id": 55,
+      "type": "UnetLoaderGGUF",
+      "pos": [
+        -3796.8548802573596,
+        6005.860335804114
+      ],
+      "size": [
+        270,
+        58
+      ],
+      "flags": {},
+      "order": 8,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "MODEL",
+          "type": "MODEL",
+          "links": [
+            98
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "UnetLoaderGGUF"
+      },
+      "widgets_values": [
+        "ltx-2-19b-distilled_Q4_K_M.gguf"
+      ]
+    },
+    {
+      "id": 52,
+      "type": "Reroute",
+      "pos": [
+        -2139.72682975565,
+        6004.754886689269
+      ],
+      "size": [
+        75,
+        26
+      ],
+      "flags": {},
+      "order": 22,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "",
+          "type": "*",
+          "link": 96
+        }
+      ],
+      "outputs": [
+        {
+          "name": "",
+          "type": "MODEL",
+          "links": [
+            99
+          ]
+        }
+      ],
+      "properties": {
+        "showOutputText": false,
+        "horizontal": false
+      }
+    },
+    {
+      "id": 47,
+      "type": "LoadImageOutput",
+      "pos": [
+        -2219.543503414468,
+        6605.149830602534
+      ],
+      "size": [
+        282.798828125,
+        362
+      ],
+      "flags": {},
+      "order": 9,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            93
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImageOutput"
+      },
+      "widgets_values": [
+        "singlepass-t2v_00003_.mp4 [output]",
+        false,
+        "refresh",
+        "image"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "CLIPTextEncode",
+      "pos": [
+        -2655.965205482096,
+        6528.806396251634
+      ],
+      "size": [
+        400,
+        200
+      ],
+      "flags": {},
+      "order": 11,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "clip",
+          "type": "CLIP",
+          "link": 11
+        }
+      ],
+      "outputs": [
+        {
+          "name": "CONDITIONING",
+          "type": "CONDITIONING",
+          "links": [
+            80
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "CLIPTextEncode"
+      },
+      "widgets_values": [
+        "The person is baffled and looks very confused. then has a realization! She says \"I finally figured out how to make image to video!\""
       ]
     }
   ],
@@ -1260,22 +1413,6 @@
       "LATENT"
     ],
     [
-      54,
-      30,
-      0,
-      25,
-      0,
-      "MODEL"
-    ],
-    [
-      57,
-      2,
-      0,
-      32,
-      0,
-      "MODEL"
-    ],
-    [
       66,
       19,
       0,
@@ -1388,14 +1525,6 @@
       "LATENT"
     ],
     [
-      85,
-      43,
-      0,
-      42,
-      1,
-      "IMAGE"
-    ],
-    [
       86,
       22,
       0,
@@ -1412,18 +1541,74 @@
       "VAE"
     ],
     [
-      88,
-      32,
+      91,
+      16,
       0,
-      44,
+      46,
+      0,
+      "IMAGE"
+    ],
+    [
+      92,
+      46,
+      0,
+      45,
+      0,
+      "IMAGE"
+    ],
+    [
+      93,
+      47,
+      0,
+      42,
+      1,
+      "IMAGE"
+    ],
+    [
+      94,
+      51,
+      0,
+      50,
       0,
       "MODEL"
     ],
     [
-      89,
-      44,
+      95,
+      53,
       0,
-      30,
+      51,
+      0,
+      "MODEL"
+    ],
+    [
+      96,
+      50,
+      0,
+      52,
+      0,
+      "MODEL"
+    ],
+    [
+      97,
+      54,
+      0,
+      53,
+      0,
+      "MODEL"
+    ],
+    [
+      98,
+      55,
+      0,
+      54,
+      0,
+      "MODEL"
+    ],
+    [
+      99,
+      52,
+      0,
+      25,
       0,
       "MODEL"
     ]
@@ -1432,17 +1617,18 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.46742370472749295,
+      "scale": 0.5141660752002423,
       "offset": [
-        3754.6136647288176,
-        -5519.833185036848
+        4436.725956683141,
+        -5633.673834630865
       ]
     },
-    "frontendVersion": "1.37.11",
+    "frontendVersion": "1.38.13",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
     "VHS_MetadataImage": true,
-    "VHS_KeepIntermediate": true
+    "VHS_KeepIntermediate": true,
+    "workflowRendererVersion": "LG"
   },
   "version": 0.4
 }

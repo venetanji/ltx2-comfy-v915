@@ -110,7 +110,9 @@ echo   2^) Source (git clone + Python deps)  [advanced / for devs]
 if /i "%COMFY_NONINTERACTIVE%"=="1" (
   set "INSTALL_MODE=2"
 ) else (
-  set /p "INSTALL_MODE=Choice [1-2] (default 2): "
+  echo (Auto-selecting default in 5 seconds...)
+  choice /c 12 /n /t 5 /d 2 /m "Choice [1-2] (default 2): "
+  if errorlevel 2 (set "INSTALL_MODE=2") else (set "INSTALL_MODE=1")
 )
 if not defined INSTALL_MODE set "INSTALL_MODE=2"
 if not "%INSTALL_MODE%"=="1" if not "%INSTALL_MODE%"=="2" set "INSTALL_MODE=1"
@@ -246,7 +248,9 @@ if "%INSTALL_MODE%"=="1" (
     if /i "%COMFY_NONINTERACTIVE%"=="1" (
       set "INSTALL_SOURCE_TOO=N"
     ) else (
-      set /p "INSTALL_SOURCE_TOO=Install source too? [y/N]: "
+  echo (Auto-selecting default in 5 seconds...)
+  choice /c YN /n /t 5 /d N /m "Install source too? [Y/N] (default N): "
+  if errorlevel 2 (set "INSTALL_SOURCE_TOO=N") else (set "INSTALL_SOURCE_TOO=Y")
     )
     if /i "%INSTALL_SOURCE_TOO%"=="Y" set "DO_SOURCE=1"
     if /i "%INSTALL_SOURCE_TOO%"=="YES" set "DO_SOURCE=1"
@@ -405,10 +409,11 @@ if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
   echo.
   echo Optional: NVIDIA driver upgrade
   echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
-  set "DO_NVIDIA="
-  set /p "DO_NVIDIA=Install/upgrade NVIDIA driver now? [y/N]: "
+  set "DO_NVIDIA=N"
+  echo (Auto-selecting default in 5 seconds...)
+  choice /c YN /n /t 5 /d N /m "Install/upgrade NVIDIA driver now? [Y/N] (default N): "
+  if errorlevel 2 (set "DO_NVIDIA=N") else (set "DO_NVIDIA=Y")
   if /i "!DO_NVIDIA!"=="Y" call :InstallNvidiaDriver
-  if /i "!DO_NVIDIA!"=="YES" call :InstallNvidiaDriver
 )
 
 REM --- If installing from source: create uv environment + install dependencies ---

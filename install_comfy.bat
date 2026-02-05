@@ -356,18 +356,7 @@ if exist "%DESKTOP_VENV_PY%" (
   echo NOTE: Desktop venv not found at "%COMFY_DATA%\.venv"; skipping Desktop venv dependency installs.
 )
 
-REM --- Optional NVIDIA driver upgrade (restored) ---
-if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
-  echo.
-  echo Optional: NVIDIA driver upgrade
-  echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
-  set "DO_NVIDIA="
-  set /p "DO_NVIDIA=Install/upgrade NVIDIA driver now? [y/N]: "
-  if /i "!DO_NVIDIA!"=="Y" call :InstallNvidiaDriver
-  if /i "!DO_NVIDIA!"=="YES" call :InstallNvidiaDriver
-)
-
-REM --- Install qBittorrent ---
+REM --- Install qBittorrent early (so large model downloads can start ASAP) ---
 echo.
 set "QBT_DEFAULT=C:\Program Files (x86)\qBittorrent\qbittorrent.exe"
 if exist "%QBT_DEFAULT%" (
@@ -407,9 +396,20 @@ REM --- Ensure qBittorrent layout config (no subfolder) ---
 REM This makes torrents extract their contents directly into the save path.
 if "%FAILED%"=="0" call :QbtEnsureNoSubfolder
 
-REM --- Torrent prompt (download models into the shared Documents folder) ---
+REM --- Torrent step (download models into the shared Documents folder) ---
 echo.
 call :HandleTorrents
+
+REM --- Optional NVIDIA driver upgrade (restored) ---
+if /i "%ENABLE_NVIDIA_DRIVER_PROMPT%"=="1" (
+  echo.
+  echo Optional: NVIDIA driver upgrade
+  echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
+  set "DO_NVIDIA="
+  set /p "DO_NVIDIA=Install/upgrade NVIDIA driver now? [y/N]: "
+  if /i "!DO_NVIDIA!"=="Y" call :InstallNvidiaDriver
+  if /i "!DO_NVIDIA!"=="YES" call :InstallNvidiaDriver
+)
 
 REM --- If installing from source: create uv environment + install dependencies ---
 echo.

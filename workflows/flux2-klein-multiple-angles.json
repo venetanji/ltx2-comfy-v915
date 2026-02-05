@@ -51,7 +51,7 @@
     },
     {
       "id": 76,
-      "type": "LoadImage",
+      "type": "LoadImageOutput",
       "pos": [
         106.59899106645648,
         1423.2159729561001
@@ -247,7 +247,7 @@
         432262096973515,
         null,
         "flux-2-klein-4b-fp8.safetensors",
-        "qwen_3_4b_fp4_flux2.safetensors",
+        "qwen_3_4b.safetensors",
         "flux2-vae.safetensors"
       ],
       "color": "#223",

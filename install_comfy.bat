@@ -11,6 +11,7 @@ set "FAILED=0"
 set "EXITCODE=0"
 set "STRICT_CUSTOM_NODE_REQUIREMENTS=0"
 set "ENABLE_NVIDIA_DRIVER_PROMPT=1"
+if /i "%COMFY_NONINTERACTIVE%"=="1" set "ENABLE_NVIDIA_DRIVER_PROMPT=0"
 set "SCRIPT_DIR=%~dp0"
 set "UV_EXE="
 set "GIT_EXE="
@@ -100,14 +101,18 @@ echo Shared ComfyUI data folder: "%COMFY_DATA%"
 echo Installer repo folder: "%SCRIPT_DIR_NORM%"
 echo ComfyUI source folder: "%COMFY_SRC%"
 
-REM --- Choose install mode (default: Desktop) ---
+REM --- Choose install mode (default: Source) ---
 set "INSTALL_MODE="
 echo.
 echo Choose install method:
 echo   1^) Desktop app (download)            [recommended for students]
 echo   2^) Source (git clone + Python deps)  [advanced / for devs]
-set /p "INSTALL_MODE=Choice [1-2] (default 1): "
-if not defined INSTALL_MODE set "INSTALL_MODE=1"
+if /i "%COMFY_NONINTERACTIVE%"=="1" (
+  set "INSTALL_MODE=2"
+) else (
+  set /p "INSTALL_MODE=Choice [1-2] (default 2): "
+)
+if not defined INSTALL_MODE set "INSTALL_MODE=2"
 if not "%INSTALL_MODE%"=="1" if not "%INSTALL_MODE%"=="2" set "INSTALL_MODE=1"
 
 set "DO_SOURCE=0"
@@ -138,7 +143,7 @@ if "%DO_SOURCE%"=="1" (
     set "FAILED=1"
     echo ERROR: uv is still not available after install.
   ) else (
-    echo uv found: "%UV_EXE%"
+  echo uv found: "!UV_EXE!"
   )
 )
 
@@ -181,6 +186,11 @@ echo.
 call :FindComfyDesktop
 if defined COMFY_DESKTOP_EXE (
   echo ComfyUI Desktop already installed: "%COMFY_DESKTOP_EXE%"
+  goto :after_primary_install
+)
+
+if /i "%COMFY_SKIP_DESKTOP%"=="1" (
+  echo COMFY_SKIP_DESKTOP=1 set; skipping ComfyUI Desktop download/install.
   goto :after_primary_install
 )
 
@@ -233,7 +243,11 @@ if "%INSTALL_MODE%"=="1" (
     echo.
     echo Optional: install ComfyUI source checkout into "%COMFY_SRC%" as well?
     set "INSTALL_SOURCE_TOO="
-    set /p "INSTALL_SOURCE_TOO=Install source too? [y/N]: "
+    if /i "%COMFY_NONINTERACTIVE%"=="1" (
+      set "INSTALL_SOURCE_TOO=N"
+    ) else (
+      set /p "INSTALL_SOURCE_TOO=Install source too? [y/N]: "
+    )
     if /i "%INSTALL_SOURCE_TOO%"=="Y" set "DO_SOURCE=1"
     if /i "%INSTALL_SOURCE_TOO%"=="YES" set "DO_SOURCE=1"
     if "%DO_SOURCE%"=="1" (
@@ -256,7 +270,7 @@ if "%INSTALL_MODE%"=="1" (
         set "FAILED=1"
         echo ERROR: uv is still not available after install.
       ) else (
-        echo uv found: "%UV_EXE%"
+  echo uv found: "!UV_EXE!"
       )
       if "%FAILED%"=="1" ( set "EXITCODE=2" & goto :Exit )
       goto :install_source_after_desktop
@@ -395,69 +409,7 @@ if "%FAILED%"=="0" call :QbtEnsureNoSubfolder
 
 REM --- Torrent prompt (download models into the shared Documents folder) ---
 echo.
-echo Looking for .torrent files next to this script...
-set "TORRENT_COUNT=0"
-for %%F in ("%SCRIPT_DIR%*.torrent") do (
-  REM Exclude NVIDIA driver torrent from the models list.
-  if /i not "%%~nxF"=="nvidia-driver.torrent" (
-    set /a TORRENT_COUNT+=1
-    set "TORRENT[!TORRENT_COUNT!]=%%~fF"
-    set "TORRENT_NAME[!TORRENT_COUNT!]=%%~nxF"
-  )
-)
-
-if "%TORRENT_COUNT%"=="0" (
-  echo No .torrent files found in: "%SCRIPT_DIR%"
-  echo Skipping torrent step.
-) else (
-  echo.
-  echo Available torrents:
-  for /l %%I in (1,1,!TORRENT_COUNT!) do (
-    echo   %%I^) !TORRENT_NAME[%%I]!
-  )
-  echo.
-  echo Enter one or more numbers ^(space-separated^) to open in qBittorrent.
-  echo Enter ALL to open all torrents.
-  echo Leave blank for ALL.
-  set "TORRENT_SELECTION="
-  set /p "TORRENT_SELECTION=Selection [ALL]: "
-
-  if /i "!TORRENT_SELECTION!"=="" set "TORRENT_SELECTION=ALL"
-
-  if /i "!TORRENT_SELECTION!"=="ALL" (
-    set "TORRENT_SELECTION="
-    for /l %%I in (1,1,!TORRENT_COUNT!) do set "TORRENT_SELECTION=!TORRENT_SELECTION! %%I"
-  )
-
-  if defined QBT_EXE (
-    echo.
-    echo Starting qBittorrent...
-    start "" "%QBT_EXE%"
-    REM Give the UI a moment to initialize so the next invocation is handled.
-    timeout /t 2 /nobreak >nul
-
-    echo.
-    echo Opening the models folder in Explorer...
-    start "" explorer "%COMFY_DATA%"
-
-    for %%S in (!TORRENT_SELECTION!) do (
-      call set "TPATH=%%TORRENT[%%S]%%"
-      call set "TNAME=%%TORRENT_NAME[%%S]%%"
-      if defined TPATH (
-        echo Opening "!TNAME!" with save path "%COMFY_DATA%"...
-        start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "!TPATH!"
-      ) else (
-        echo WARNING: Invalid selection: %%S
-      )
-    )
-    echo.
-    echo NOTE: These torrents should contain a "models" folder.
-    echo       Saving into "%COMFY_DATA%" merges into "%COMFY_DATA%\models".
-  ) else (
-    set "FAILED=1"
-    echo ERROR: qBittorrent not available; cannot open torrents.
-  )
-)
+call :HandleTorrents
 
 REM --- If installing from source: create uv environment + install dependencies ---
 echo.
@@ -503,6 +455,18 @@ if exist "requirements.txt" (
 ) else (
   set "FAILED=1"
   echo ERROR: requirements.txt not found in "%COMFY_SRC%".
+)
+
+REM --- Install extra requirements shipped with this installer repo (optional) ---
+echo.
+if exist "%SCRIPT_DIR%requirements.txt" (
+  echo Installing installer repo requirements from "%SCRIPT_DIR%requirements.txt"...
+  call "%UV_EXE%" pip install -r "%SCRIPT_DIR%requirements.txt"
+  if errorlevel 1 (
+    echo WARNING: Failed to install installer repo requirements.txt
+  )
+) else (
+  echo No installer repo requirements.txt found; skipping.
 )
 
 if exist "manager_requirements.txt" (
@@ -634,9 +598,9 @@ if errorlevel 1 echo WARNING: Failed to clone %FOLDER%
 goto :eof
 
 :InstallNvidiaDriver
-set "NVIDIA_TARGET=591.74"
-set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.74/591.74-desktop-win10-win11-64bit-international-dch-whql.exe"
-set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.74.exe"
+set "NVIDIA_TARGET=591.86"
+set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.86/591.86-desktop-win10-win11-64bit-international-dch-whql.exe"
+set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.86.exe"
 set "NVIDIA_DL_DIR=%TEMP%\nvidia-driver-%NVIDIA_TARGET%"
 
 echo Installing NVIDIA driver (%NVIDIA_TARGET%)...
@@ -764,15 +728,34 @@ exit /b 0
 
 :FindUv
 set "UV_EXE="
-for /f "delims=" %%P in ('where uv.exe 2^>nul') do (
-  if not defined UV_EXE set "UV_EXE=%%P"
-)
+set "UV_LOCALAPPDATA=%LOCALAPPDATA%"
+if not defined UV_LOCALAPPDATA set "UV_LOCALAPPDATA=%USERPROFILE%\AppData\Local"
+
+REM Prefer WinGet shim uv.exe first (PATH may not be refreshed in this shell)
+if exist "%UV_LOCALAPPDATA%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%UV_LOCALAPPDATA%\Microsoft\WinGet\Links\uv.exe"
+
+REM Fall back to PATH resolution of uv/uv.exe
 if not defined UV_EXE (
-  for /f "delims=" %%P in ('where uv 2^>nul') do (
-    if not defined UV_EXE set "UV_EXE=%%P"
+  for %%N in (uv.exe uv) do (
+    if not defined UV_EXE for /f "delims=" %%P in ('where %%N 2^>nul') do (
+      if not defined UV_EXE set "UV_EXE=%%P"
+    )
   )
 )
-if not defined UV_EXE if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
+
+REM As a last resort, accept uvx/uvw shims only if uv.exe isn't present.
+if not defined UV_EXE if exist "%UV_LOCALAPPDATA%\Microsoft\WinGet\Links\uvx.exe" set "UV_EXE=%UV_LOCALAPPDATA%\Microsoft\WinGet\Links\uvx.exe"
+if not defined UV_EXE if exist "%UV_LOCALAPPDATA%\Microsoft\WinGet\Links\uvw.exe" set "UV_EXE=%UV_LOCALAPPDATA%\Microsoft\WinGet\Links\uvw.exe"
+
+if /i "%COMFY_DEBUG_UV%"=="1" (
+  echo [debug] UV_LOCALAPPDATA=%UV_LOCALAPPDATA%
+  echo [debug] UV_EXE=%UV_EXE%
+)
+REM Common per-user install locations
+if not defined UV_EXE if exist "%LocalAppData%\Programs\uv\uv.exe" set "UV_EXE=%LocalAppData%\Programs\uv\uv.exe"
+if not defined UV_EXE if exist "%LocalAppData%\Programs\uvx\uvx.exe" set "UV_EXE=%LocalAppData%\Programs\uvx\uvx.exe"
+if not defined UV_EXE if exist "%ProgramFiles%\uv\uv.exe" set "UV_EXE=%ProgramFiles%\uv\uv.exe"
+if not defined UV_EXE if exist "%ProgramFiles%\uvx\uvx.exe" set "UV_EXE=%ProgramFiles%\uvx\uvx.exe"
 exit /b 0
 
 :FindGit
@@ -984,6 +967,115 @@ echo.>> "%QBT_INI%"
 echo [BitTorrent]>> "%QBT_INI%"
 echo Session\TorrentContentLayout=NoSubfolder>> "%QBT_INI%"
 
+exit /b 0
+
+:WaitForProcessExit
+REM Args: image_name (e.g. qbittorrent.exe)
+set "WPROC=%~1"
+if "%WPROC%"=="" exit /b 0
+:wait_proc_loop
+tasklist /fi "imagename eq %WPROC%" 2>nul | find /i "%WPROC%" >nul
+if not errorlevel 1 (
+  pause >nul
+  goto :wait_proc_loop
+)
+exit /b 0
+
+:HandleTorrents
+echo Looking for .torrent files next to this script...
+
+set "TORRENT_FOUND=0"
+for %%F in ("%SCRIPT_DIR%*.torrent") do (
+  if /i not "%%~nxF"=="nvidia-driver.torrent" set "TORRENT_FOUND=1"
+)
+
+if "%TORRENT_FOUND%"=="0" (
+  echo No .torrent files found in: "%SCRIPT_DIR%"
+  echo Skipping torrent step.
+  exit /b 0
+)
+
+REM If qBittorrent is running, check if config is already patched.
+set "QBT_RUNNING=0"
+tasklist /fi "imagename eq qbittorrent.exe" 2>nul | find /i "qbittorrent.exe" >nul
+if not errorlevel 1 set "QBT_RUNNING=1"
+
+set "QBT_INI=%AppData%\qBittorrent\qBittorrent.ini"
+set "QBT_CONFIG_OK=0"
+if exist "%QBT_INI%" (
+  findstr /i /c:"Session\TorrentContentLayout=NoSubfolder" "%QBT_INI%" >nul 2>nul
+  if not errorlevel 1 set "QBT_CONFIG_OK=1"
+)
+
+if "%QBT_RUNNING%"=="1" (
+  if "%QBT_CONFIG_OK%"=="1" (
+    echo qBittorrent is running and already configured to not create subfolders.
+    echo Assuming existing downloads are correct; skipping torrent import.
+    exit /b 0
+  )
+
+  echo qBittorrent is running but its config is not patched.
+  echo Please CLOSE qBittorrent now so the installer can update its config, then press Enter to continue...
+  call :WaitForProcessExit "qbittorrent.exe"
+)
+
+REM Ensure qBittorrent exe exists
+if not defined QBT_EXE (
+  for /f "delims=" %%P in ('where qbittorrent.exe 2^>nul') do (
+    if not defined QBT_EXE set "QBT_EXE=%%P"
+  )
+  if exist "%ProgramFiles%\qBittorrent\qbittorrent.exe" set "QBT_EXE=%ProgramFiles%\qBittorrent\qbittorrent.exe"
+  if not defined QBT_EXE if exist "%ProgramFiles(x86)%\qBittorrent\qbittorrent.exe" set "QBT_EXE=%ProgramFiles(x86)%\qBittorrent\qbittorrent.exe"
+  if not defined QBT_EXE if exist "%LocalAppData%\Programs\qBittorrent\qbittorrent.exe" set "QBT_EXE=%LocalAppData%\Programs\qBittorrent\qbittorrent.exe"
+)
+
+if not defined QBT_EXE (
+  set "FAILED=1"
+  echo ERROR: qBittorrent not available; cannot open torrents.
+  exit /b 0
+)
+
+REM Patch config (now that qBittorrent is not running)
+if not exist "%AppData%\qBittorrent\" mkdir "%AppData%\qBittorrent" >nul 2>nul
+if exist "%QBT_INI%" (
+  findstr /i /c:"Session\TorrentContentLayout=NoSubfolder" "%QBT_INI%" >nul 2>nul
+  if errorlevel 1 (
+    echo.>> "%QBT_INI%"
+    echo [BitTorrent]>> "%QBT_INI%"
+    echo Session\TorrentContentLayout=NoSubfolder>> "%QBT_INI%"
+  )
+) else (
+  echo.> "%QBT_INI%"
+  echo [BitTorrent]>> "%QBT_INI%"
+  echo Session\TorrentContentLayout=NoSubfolder>> "%QBT_INI%"
+)
+echo qBittorrent configuration ensured (NoSubfolder).
+
+REM If qBittorrent wasn't running, start it and auto-open torrents.
+if "%QBT_RUNNING%"=="0" (
+  echo Starting qBittorrent...
+  start "" "%QBT_EXE%"
+  timeout /t 2 /nobreak >nul
+
+  echo Opening the models folder in Explorer...
+  start "" explorer "%COMFY_DATA%"
+
+  for %%F in ("%SCRIPT_DIR%*.torrent") do (
+    if /i not "%%~nxF"=="nvidia-driver.torrent" (
+      echo Opening "%%~nxF" with save path "%COMFY_DATA%"...
+      start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "%%~fF"
+    )
+  )
+) else (
+  REM Was running but user closed it for patching; restart but don't auto-import torrents.
+  echo Restarting qBittorrent after configuration patch...
+  start "" "%QBT_EXE%"
+  timeout /t 2 /nobreak >nul
+)
+
+echo.
+echo NOTE: These torrents should contain a "models" folder.
+echo       Saving into "%COMFY_DATA%" merges into "%COMFY_DATA%\models".
 exit /b 0
 
 :Exit

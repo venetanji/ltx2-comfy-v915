@@ -985,15 +985,9 @@ exit /b 0
 echo Looking for .torrent files next to this script...
 
 set "TORRENT_FOUND=0"
-for %%F in ("%SCRIPT_DIR%*.torrent") do (
-  if /i not "%%~nxF"=="nvidia-driver.torrent" set "TORRENT_FOUND=1"
-)
+for %%F in ("%SCRIPT_DIR%*.torrent") do if /i not "%%~nxF"=="nvidia-driver.torrent" set "TORRENT_FOUND=1"
 
-if "%TORRENT_FOUND%"=="0" (
-  echo No .torrent files found in: "%SCRIPT_DIR%"
-  echo Skipping torrent step.
-  exit /b 0
-)
+if "%TORRENT_FOUND%"=="0" goto :HandleTorrents_NoTorrents
 
 REM If qBittorrent is running, check if config is already patched.
 set "QBT_RUNNING=0"
@@ -1015,7 +1009,8 @@ if "%QBT_RUNNING%"=="1" (
   )
 
   echo qBittorrent is running but its config is not patched.
-  echo Please CLOSE qBittorrent now so the installer can update its config, then press Enter to continue...
+  echo Please CLOSE qBittorrent now so the installer can update its config.
+  echo Waiting for qbittorrent.exe to exit...
   call :WaitForProcessExit "qbittorrent.exe"
 )
 
@@ -1060,11 +1055,9 @@ if "%QBT_RUNNING%"=="0" (
   echo Opening the models folder in Explorer...
   start "" explorer "%COMFY_DATA%"
 
-  for %%F in ("%SCRIPT_DIR%*.torrent") do (
-    if /i not "%%~nxF"=="nvidia-driver.torrent" (
-      echo Opening "%%~nxF" with save path "%COMFY_DATA%"...
-      start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "%%~fF"
-    )
+  for %%F in ("%SCRIPT_DIR%*.torrent") do if /i not "%%~nxF"=="nvidia-driver.torrent" (
+    echo Opening "%%~nxF" with save path "%COMFY_DATA%"...
+    start "" "%QBT_EXE%" --skip-dialog=true --save-path="%COMFY_DATA%" "%%~fF"
   )
 ) else (
   REM Was running but user closed it for patching; restart but don't auto-import torrents.
@@ -1076,6 +1069,11 @@ if "%QBT_RUNNING%"=="0" (
 echo.
 echo NOTE: These torrents should contain a "models" folder.
 echo       Saving into "%COMFY_DATA%" merges into "%COMFY_DATA%\models".
+exit /b 0
+
+:HandleTorrents_NoTorrents
+echo No .torrent files found in: "%SCRIPT_DIR%"
+echo Skipping torrent step.
 exit /b 0
 
 :Exit

@@ -52,6 +52,83 @@
       "bgcolor": "#000"
     },
     {
+      "id": 101,
+      "type": "LoadImageOutput",
+      "pos": [
+        -59.46000378350442,
+        828.7521188594066
+      ],
+      "size": [
+        282.798828125,
+        362
+      ],
+      "flags": {},
+      "order": 2,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "IMAGE",
+          "type": "IMAGE",
+          "links": [
+            178
+          ]
+        },
+        {
+          "name": "MASK",
+          "type": "MASK",
+          "links": null
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "LoadImageOutput"
+      },
+      "widgets_values": [
+        "caterpillar_tutu_realistic_00002_.png [output]",
+        false,
+        "refresh",
+        "image"
+      ]
+    },
+    {
+      "id": 9,
+      "type": "SaveImage",
+      "pos": [
+        750.9844667138543,
+        821.2124266289165
+      ],
+      "size": [
+        416.6666666666667,
+        470
+      ],
+      "flags": {},
+      "order": 4,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "images",
+          "type": "IMAGE",
+          "link": 154
+        }
+      ],
+      "outputs": [],
+      "properties": {
+        "Node name for S&R": "SaveImage",
+        "cnr_id": "comfy-core",
+        "ver": "0.8.2",
+        "enableTabs": false,
+        "tabWidth": 65,
+        "tabXOffset": 10,
+        "hasSecondTab": false,
+        "secondTabText": "Send Back",
+        "secondTabOffset": 80,
+        "secondTabWidth": 65
+      },
+      "widgets_values": [
+        "Flux2-Klein-4b-distilled"
+      ]
+    },
+    {
       "id": 75,
       "type": "7b34ab90-36f9-45ba-a665-71d418f0df18",
       "pos": [
@@ -149,85 +226,8 @@
         "flux-2-klein-4b-fp8.safetensors",
         "qwen_3_4b.safetensors",
         "flux2-vae.safetensors",
-        0,
-        0
-      ]
-    },
-    {
-      "id": 101,
-      "type": "LoadImageOutput",
-      "pos": [
-        -59.46000378350442,
-        828.7521188594066
-      ],
-      "size": [
-        282.798828125,
-        362
-      ],
-      "flags": {},
-      "order": 2,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "IMAGE",
-          "type": "IMAGE",
-          "links": [
-            178
-          ]
-        },
-        {
-          "name": "MASK",
-          "type": "MASK",
-          "links": null
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "LoadImageOutput"
-      },
-      "widgets_values": [
-        "Flux2-Klein_00002_.png [output]",
-        false,
-        "refresh",
-        "image"
-      ]
-    },
-    {
-      "id": 9,
-      "type": "SaveImage",
-      "pos": [
-        750.9844667138543,
-        821.2124266289165
-      ],
-      "size": [
-        416.6666666666667,
-        470
-      ],
-      "flags": {},
-      "order": 4,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "images",
-          "type": "IMAGE",
-          "link": 154
-        }
-      ],
-      "outputs": [],
-      "properties": {
-        "Node name for S&R": "SaveImage",
-        "cnr_id": "comfy-core",
-        "ver": "0.8.2",
-        "enableTabs": false,
-        "tabWidth": 65,
-        "tabXOffset": 10,
-        "hasSecondTab": false,
-        "secondTabText": "Send Back",
-        "secondTabOffset": 80,
-        "secondTabWidth": 65
-      },
-      "widgets_values": [
-        "Flux2-Klein-4b-distilled"
+        1280,
+        720
       ]
     }
   ],
@@ -440,7 +440,7 @@
               106
             ],
             "flags": {},
-            "order": 7,
+            "order": 4,
             "mode": 0,
             "inputs": [
               {
@@ -516,7 +516,7 @@
               46
             ],
             "flags": {},
-            "order": 8,
+            "order": 5,
             "mode": 0,
             "inputs": [
               {
@@ -595,7 +595,7 @@
               "secondTabWidth": 65
             },
             "widgets_values": [
-              993215262830689,
+              792213073960949,
               "randomize"
             ]
           },
@@ -611,7 +611,7 @@
               82
             ],
             "flags": {},
-            "order": 10,
+            "order": 8,
             "mode": 0,
             "inputs": [
               {
@@ -670,7 +670,7 @@
               106
             ],
             "flags": {},
-            "order": 11,
+            "order": 9,
             "mode": 0,
             "inputs": [
               {
@@ -731,7 +731,7 @@
               230
             ],
             "flags": {},
-            "order": 13,
+            "order": 11,
             "mode": 0,
             "inputs": [
               {
@@ -792,7 +792,7 @@
               88
             ],
             "flags": {},
-            "order": 9,
+            "order": 7,
             "mode": 0,
             "inputs": [
               {
@@ -844,7 +844,7 @@
               58
             ],
             "flags": {},
-            "order": 12,
+            "order": 10,
             "mode": 0,
             "inputs": [
               {
@@ -903,7 +903,7 @@
               106
             ],
             "flags": {},
-            "order": 15,
+            "order": 13,
             "mode": 0,
             "inputs": [
               {
@@ -953,7 +953,7 @@
               86
             ],
             "flags": {},
-            "order": 14,
+            "order": 12,
             "mode": 0,
             "inputs": [
               {
@@ -1023,7 +1023,7 @@
               98
             ],
             "flags": {},
-            "order": 6,
+            "order": 3,
             "mode": 0,
             "inputs": [
               {
@@ -1083,7 +1083,7 @@
               106
             ],
             "flags": {},
-            "order": 4,
+            "order": 2,
             "mode": 0,
             "inputs": [
               {
@@ -1145,7 +1145,7 @@
               106
             ],
             "flags": {},
-            "order": 5,
+            "order": 6,
             "mode": 0,
             "inputs": [
               {
@@ -1207,7 +1207,7 @@
               82
             ],
             "flags": {},
-            "order": 2,
+            "order": 14,
             "mode": 0,
             "inputs": [
               {
@@ -1236,7 +1236,7 @@
               "Node name for S&R": "PrimitiveInt"
             },
             "widgets_values": [
-              0,
+              1280,
               "randomize"
             ]
           },
@@ -1252,7 +1252,7 @@
               82
             ],
             "flags": {},
-            "order": 3,
+            "order": 15,
             "mode": 0,
             "inputs": [
               {
@@ -1281,7 +1281,7 @@
               "Node name for S&R": "PrimitiveInt"
             },
             "widgets_values": [
-              0,
+              720,
               "randomize"
             ]
           }
@@ -1910,7 +1910,7 @@
   },
   "config": {},
   "extra": {
-    "frontendVersion": "1.37.11",
+    "frontendVersion": "1.38.13",
     "workflowRendererVersion": "LG",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,
@@ -1919,8 +1919,8 @@
     "ds": {
       "scale": 0.4551882335528995,
       "offset": [
-        1554.4459235390862,
-        -480.5445240302227
+        1502.8189299839705,
+        -495.92277742961863
       ]
     }
   },

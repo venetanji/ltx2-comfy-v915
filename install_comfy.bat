@@ -408,15 +408,14 @@ REM --- NVIDIA driver upgrade (defaults to automatic when an update is needed) -
 REM Behavior:
 REM   - If COMFY_DISABLE_NVIDIA_DRIVER=1: skip.
 REM   - Otherwise: call :InstallNvidiaDriver, which will detect NVIDIA presence and skip if already up to date.
-if /i "%COMFY_DISABLE_NVIDIA_DRIVER%"=="1" (
-  echo.
-  echo NVIDIA driver install disabled (COMFY_DISABLE_NVIDIA_DRIVER=1); skipping.
-) else (
-  echo.
-  echo NVIDIA driver check (%NVIDIA_TARGET%)...
-  echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
-  call :InstallNvidiaDriver
-)
+if /i "%COMFY_DISABLE_NVIDIA_DRIVER%"=="1" goto :AfterNvidiaDriver
+
+echo.
+echo NVIDIA driver check 591.86...
+echo IMPORTANT: On lab machines that reset on reboot, driver updates may not persist.
+call :InstallNvidiaDriver
+
+:AfterNvidiaDriver
 
 REM --- If installing from source: create uv environment + install dependencies ---
 echo.

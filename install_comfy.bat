@@ -607,6 +607,7 @@ set "NVIDIA_TARGET=591.86"
 set "NVIDIA_URL=https://us.download.nvidia.com/Windows/591.86/591.86-desktop-win10-win11-64bit-international-dch-whql.exe"
 set "NVIDIA_EXE=%TEMP%\nvidia-driver-591.86.exe"
 set "NVIDIA_DL_DIR=%TEMP%\nvidia-driver-%NVIDIA_TARGET%"
+set "NVIDIA_LOCAL_EXE=%SCRIPT_DIR%591.86-desktop-win10-win11-64bit-international-dch-whql.exe"
 
 echo Installing NVIDIA driver (%NVIDIA_TARGET%)...
 
@@ -646,6 +647,9 @@ if /i "%NVIDIA_INSTALLED%"=="UNKNOWN" (
   )
 )
 
+REM Prefer a locally-provided installer next to this script (avoids re-downloading).
+if exist "%NVIDIA_LOCAL_EXE%" set "NVIDIA_EXE=%NVIDIA_LOCAL_EXE%"
+
 if exist "%NVIDIA_EXE%" goto :nvidia_run
 
 REM Locate an optional NVIDIA driver torrent next to the script.
@@ -664,7 +668,9 @@ if defined NVIDIA_TORRENT (
 )
 
 set "NVIDIA_GET="
-set /p "NVIDIA_GET=Choice [1-3] (default 2): "
+echo (Auto-selecting default in 5 seconds...)
+choice /c 123 /n /t 5 /d 2 /m "Choice [1-3] (default 2): "
+set "NVIDIA_GET=%ERRORLEVEL%"
 if not defined NVIDIA_GET set "NVIDIA_GET=2"
 
 if "%NVIDIA_GET%"=="1" (
@@ -728,7 +734,12 @@ if not exist "%NVIDIA_EXE%" (
 echo Launching NVIDIA driver installer...
 echo IMPORTANT: DO NOT REBOOT this computer. These machines are reset on reboot.
 echo If the installer requests a reboot, close it and proceed without rebooting.
-start "" /wait "%NVIDIA_EXE%"
+echo Attempting quiet install...
+start "" /wait "%NVIDIA_EXE%" -s
+if errorlevel 1 (
+  echo WARNING: Quiet install did not report success. Launching interactive installer...
+  start "" /wait "%NVIDIA_EXE%"
+)
 exit /b 0
 
 :FindUv

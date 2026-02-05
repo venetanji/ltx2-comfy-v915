@@ -3,9 +3,11 @@
 
 # GGUF support (package name known on PyPI)
 gguf
+triton-windows
+
+opencv-python
 
 # SageAttention for Windows (prebuilt wheel)
 https://github.com/woct0rdho/SageAttention/releases/download/v2.2.0-windows.post4/sageattention-2.2.0+cu130torch2.9.0andhigher.post4-cp39-abi3-win_amd64.whl
 
-# OpenCV CUDA-enabled contrib wheel
-https://github.com/cudawarped/opencv-python-cuda-wheels/releases/download/4.13.0.90/opencv_contrib_python-4.13.0.90-cp37-abi3-win_amd64.whl
+

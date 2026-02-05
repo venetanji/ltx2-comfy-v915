@@ -1,0 +1,22 @@
+{
+  "mcpServers": {
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "C:\\Users\\user.V915-31\\Documents\\ComfyUI\\output"
+      ]
+    },
+    "comfyui": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/venetanji/comfyui-mcp-server",
+        "comfyui-mcp-server",
+        "--output-folder",
+        "C:\\Users\\user.V915-31\\Documents\\ComfyUI\\output"
+      ]
+    }
+  }
+}

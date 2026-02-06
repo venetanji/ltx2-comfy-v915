@@ -16,7 +16,8 @@
         "comfyui-mcp-server",
         "--output-folder",
         "C:\\Users\\user.V915-31\\Documents\\ComfyUI\\output"
-      ]
+      ],
+      "timeout": 1800000
     }
   }
 }

@@ -508,7 +508,7 @@ if "%FAILED%"=="0" (
   if "%RUN_SOURCE%"=="1" (
     echo Starting ComfyUI...
     set "GIT_PYTHON_GIT_EXECUTABLE=%GIT_EXE%"
-    call "%UV_EXE%" run python main.py --enable-manager --base-directory "%COMFY_DATA%"
+    call "%UV_EXE%" run python main.py --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%"
     set "EXITCODE=%ERRORLEVEL%"
     popd
     goto :Exit

@@ -15,9 +15,21 @@
         "git+https://github.com/venetanji/comfyui-mcp-server",
         "comfyui-mcp-server",
         "--output-folder",
-        "C:\\Users\\user.V915-31\\Documents\\ComfyUI\\output"
+        "C:\\Users\\user.V915-31\\Documents\\ComfyUI\\output",
+        "--comfy-url",
+        "http://localhost:8188"
       ],
       "timeout": 1800000
+    },
+    "storyworld-mcp": {
+        "command": "uvx",
+        "args": [
+          "--from",
+          "git+https://github.com/venetanji/storyworld-mcp",
+          "storyworld-mcp",
+          "--public-images-dir",
+          "C:\\Users\\user.V915-31\\Documents\\ComfyUI\\output"
+        ]
     }
   }
 }

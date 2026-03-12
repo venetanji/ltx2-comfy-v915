@@ -335,7 +335,7 @@ REM STEP 10 -- NVIDIA driver
 REM ============================================================
 if /i not "%COMFY_DISABLE_NVIDIA_DRIVER%"=="1" (
   echo.
-  echo [Step 10] NVIDIA driver check (target 591.86)...
+  echo [Step 10] NVIDIA driver check (target 591.86)
   set "NVIDIA_PS_ARGS=-File ""%SCRIPT_DIR%scripts\Install-NvidiaDriver.ps1"" -ScriptDir ""%SCRIPT_DIR%"""
   if defined QBT_EXE set "NVIDIA_PS_ARGS=!NVIDIA_PS_ARGS! -QbtExe ""%QBT_EXE%"""
   if /i "%COMFY_NONINTERACTIVE%"=="1" set "NVIDIA_PS_ARGS=!NVIDIA_PS_ARGS! -NonInteractive"

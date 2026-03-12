@@ -237,8 +237,10 @@ if "%INSTALL_MODE%"=="1" (
       set "DO_SOURCE=1"
       call :EnsureComfyUiRepo
       if exist "%COMFY_SRC%\main.py" (
-        >  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
-        >> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: '%COMFY_DATA_YAML%'
+        (
+          echo comfyui:
+          echo   base_path: '%COMFY_DATA_YAML%'
+        ) > "%COMFY_SRC%\extra_model_paths.yaml"
       )
     )
   )

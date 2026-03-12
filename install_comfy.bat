@@ -464,7 +464,6 @@ if not defined GIT_EXE if exist "%LocalAppData%\Programs\Git\cmd\git.exe" set "G
 if not defined GIT_EXE if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
 if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
 if not defined GIT_EXE for /f "delims=" %%P in ('where git.exe 2^>nul') do if not defined GIT_EXE set "GIT_EXE=%%P"
-if not defined GIT_EXE for /f "tokens=2,*" %%A in ('reg query "HKLM\SOFTWARE\GitForWindows" /v InstallPath 2^>nul ^| findstr /i "InstallPath"') do if exist "%%B\cmd\git.exe" set "GIT_EXE=%%B\cmd\git.exe"
 exit /b 0
 
 :FindQbt

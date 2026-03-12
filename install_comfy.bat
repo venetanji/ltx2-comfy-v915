@@ -209,7 +209,7 @@ goto :after_primary_install
 :install_source_primary
 echo.
 echo Preparing ComfyUI source checkout...
-echo [DBG A]
+echo [DBG A] COMFY_SRC="%COMFY_SRC%" GIT_EXE="%GIT_EXE%"
 call :EnsureComfyUiRepo
 echo [DBG B] errorlevel=%errorlevel%
 if errorlevel 1 ( set "EXITCODE=2" & goto :Exit )
@@ -220,10 +220,7 @@ if not exist "%COMFY_SRC%\main.py" (
 )
 echo [DBG D]
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
-(
-  echo(comfyui:
-  echo(  base_path: '%COMFY_DATA_YAML%'
-) > "%COMFY_SRC%\extra_model_paths.yaml"
+powershell -NoProfile -Command "Set-Content '%COMFY_SRC%\extra_model_paths.yaml' \"comfyui:`n  base_path: '%COMFY_DATA_YAML%'\" -Encoding UTF8"
 echo [DBG E]
 goto :after_primary_install
 
@@ -243,10 +240,7 @@ if "%INSTALL_MODE%"=="1" (
       set "DO_SOURCE=1"
       call :EnsureComfyUiRepo
       if exist "%COMFY_SRC%\main.py" (
-        (
-          echo(comfyui:
-          echo(  base_path: '%COMFY_DATA_YAML%'
-        ) > "%COMFY_SRC%\extra_model_paths.yaml"
+        powershell -NoProfile -Command "Set-Content '%COMFY_SRC%\extra_model_paths.yaml' \"comfyui:`n  base_path: '%COMFY_DATA_YAML%'\" -Encoding UTF8"
       )
     )
   )

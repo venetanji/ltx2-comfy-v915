@@ -156,9 +156,10 @@ Write-Host "Launching NVIDIA driver installer..."
 Write-Host "IMPORTANT: DO NOT REBOOT -- lab machines reset on reboot."
 Write-Host "If the installer asks to reboot, close it without rebooting."
 
-$proc = Start-Process $driverExe -ArgumentList '-s' -Wait -PassThru
+# -s = silent, -n = no reboot, -noeula = skip EULA prompt
+$proc = Start-Process $driverExe -ArgumentList '-s', '-n', '-noeula' -Wait -PassThru
 if ($proc.ExitCode -ne 0) {
-    Write-Warning "Quiet install returned $($proc.ExitCode). Launching interactive installer..."
-    Start-Process $driverExe -Wait
+    Write-Warning "Quiet install returned $($proc.ExitCode). Launching interactive installer (no reboot)..."
+    Start-Process $driverExe -ArgumentList '-n' -Wait
 }
 exit 0

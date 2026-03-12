@@ -106,7 +106,7 @@ function Install-NodeRequirements {
     $name = Split-Path $NodeDir -Leaf
     Write-Host ""
     Write-Host "[custom_nodes] Installing requirements for $name..."
-    & $UvExe pip install --system -r $req
+    & $UvExe pip install -r $req
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Failed to install requirements for $name"
         if ($Strict) { $script:failed = $true }

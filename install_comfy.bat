@@ -328,11 +328,7 @@ REM ============================================================
 echo.
 echo [Step 9] Handling model torrents...
 if defined QBT_EXE (
-  set "T_FILE=%SCRIPT_DIR%scripts\Handle-Torrents.ps1"
-  set "T_DIR=%SCRIPT_DIR%"
-  set "T_SAVE=%COMFY_DATA%"
-  set "T_QBT=%QBT_EXE%"
-  powershell -NoProfile -ExecutionPolicy RemoteSigned -File "!T_FILE!" -TorrentDir "!T_DIR!" -SavePath "!T_SAVE!" -QbtExe "!T_QBT!"
+  powershell -NoProfile -ExecutionPolicy RemoteSigned -File "%SCRIPT_DIR%scripts\Handle-Torrents.ps1" -TorrentDir "%SCRIPT_DIR%" -SavePath "%COMFY_DATA%" -QbtExe "%QBT_EXE%"
 ) else (
   echo WARNING: qBittorrent not found; skipping torrent step.
 )
@@ -375,14 +371,6 @@ if not exist ".venv\Scripts\python.exe" (
   echo Existing venv found; reusing.
 )
 
-echo Installing custom node requirements into venv...
-for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
-  if exist "%%~fD\requirements.txt" (
-    call "%UV_EXE%" pip install -r "%%~fD\requirements.txt"
-    if errorlevel 1 echo WARNING: requirements failed for %%~nD
-  )
-)
-
 echo Installing torch + torchvision + torchaudio (CUDA 13.0 wheels)...
 call "%UV_EXE%" pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu130
 if errorlevel 1 ( set "FAILED=1" & echo ERROR: Failed to install torch packages. )
@@ -404,6 +392,14 @@ if exist "%SCRIPT_DIR%requirements.txt" (
 if exist "manager_requirements.txt" (
   call "%UV_EXE%" pip install -r manager_requirements.txt
   if errorlevel 1 ( set "FAILED=1" & echo ERROR: Failed to install manager_requirements.txt )
+)
+
+echo Installing custom node requirements into venv...
+for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
+  if exist "%%~fD\requirements.txt" (
+    call "%UV_EXE%" pip install -r "%%~fD\requirements.txt"
+    if errorlevel 1 echo WARNING: requirements failed for %%~nD
+  )
 )
 
 echo Installing common custom-node dependencies...

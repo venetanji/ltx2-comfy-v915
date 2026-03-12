@@ -285,6 +285,21 @@ if exist "%SCRIPT_DIR%workflows" (
 )
 
 REM ============================================================
+REM STEP 6b -- Install torch CUDA into source venv BEFORE custom nodes
+REM            (prevents custom node requirements.txt from pulling CPU torch)
+REM ============================================================
+if "%DO_SOURCE%"=="1" (
+  if exist "%COMFY_SRC%\.venv\Scripts\python.exe" (
+    echo.
+    echo [Step 6b] Installing torch CUDA 13.0 wheels into venv before custom nodes...
+    pushd "%COMFY_SRC%"
+    call "%UV_EXE%" pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu130
+    if errorlevel 1 ( echo WARNING: torch CUDA pre-install failed; custom nodes may pull CPU torch. )
+    popd
+  )
+)
+
+REM ============================================================
 REM STEP 7 -- Install custom nodes
 REM ============================================================
 echo.

@@ -328,8 +328,11 @@ REM ============================================================
 echo.
 echo [Step 9] Handling model torrents...
 if defined QBT_EXE (
-  set "TORRENTS_ARGS=-File "%SCRIPT_DIR%scripts\Handle-Torrents.ps1" -TorrentDir "%SCRIPT_DIR%" -SavePath "%COMFY_DATA%" -QbtExe "%QBT_EXE%""
-  powershell -NoProfile -ExecutionPolicy RemoteSigned !TORRENTS_ARGS!
+  set "T_FILE=%SCRIPT_DIR%scripts\Handle-Torrents.ps1"
+  set "T_DIR=%SCRIPT_DIR%"
+  set "T_SAVE=%COMFY_DATA%"
+  set "T_QBT=%QBT_EXE%"
+  powershell -NoProfile -ExecutionPolicy RemoteSigned -File "!T_FILE!" -TorrentDir "!T_DIR!" -SavePath "!T_SAVE!" -QbtExe "!T_QBT!"
 ) else (
   echo WARNING: qBittorrent not found; skipping torrent step.
 )
@@ -375,7 +378,7 @@ if not exist ".venv\Scripts\python.exe" (
 echo Installing custom node requirements into venv...
 for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
   if exist "%%~fD\requirements.txt" (
-    call "%UV_EXE%" pip install --python "%COMFY_SRC%\.venv\Scripts\python.exe" -r "%%~fD\requirements.txt"
+    call "%UV_EXE%" pip install -r "%%~fD\requirements.txt"
     if errorlevel 1 echo WARNING: requirements failed for %%~nD
   )
 )

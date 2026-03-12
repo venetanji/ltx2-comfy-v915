@@ -210,8 +210,13 @@ goto :after_primary_install
 echo.
 echo Preparing ComfyUI source checkout...
 echo [DBG A] COMFY_SRC="%COMFY_SRC%" GIT_EXE="%GIT_EXE%"
-call :EnsureComfyUiRepo
-echo [DBG B] errorlevel=%errorlevel%
+REM Inline EnsureComfyUiRepo to bypass call :label
+if not defined GIT_EXE ( echo ERROR: git not found. & set "EXITCODE=2" & goto :Exit )
+if exist "%COMFY_SRC%\.git" (
+  echo Updating ComfyUI repo...
+  "%GIT_EXE%" -C "%COMFY_SRC%" pull
+)
+echo [DBG B] after inline update
 if errorlevel 1 ( set "EXITCODE=2" & goto :Exit )
 echo [DBG C]
 if not exist "%COMFY_SRC%\main.py" (

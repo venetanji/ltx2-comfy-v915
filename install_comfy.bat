@@ -441,10 +441,7 @@ REM ============================================================
 
 :FindUv
 set "UV_EXE="
-echo [DEBUG FindUv] LocalAppData="%LocalAppData%"
-echo [DEBUG FindUv] checking: "%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
 if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
-echo [DEBUG FindUv] after check1: UV_EXE="%UV_EXE%"
 if not defined UV_EXE if exist "%LocalAppData%\uv\uv.exe" set "UV_EXE=%LocalAppData%\uv\uv.exe"
 if not defined UV_EXE if exist "%LocalAppData%\Programs\uv\uv.exe" set "UV_EXE=%LocalAppData%\Programs\uv\uv.exe"
 if not defined UV_EXE if exist "%ProgramFiles%\uv\uv.exe" set "UV_EXE=%ProgramFiles%\uv\uv.exe"

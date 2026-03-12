@@ -1,7 +1,29 @@
 <#
 .SYNOPSIS
     Clones or updates custom nodes listed in a text file, then installs their
-    Python requirements into the active uv environment.
+    Pytfunction Install-NodeRequirements {
+    param([string]$NodeDir)
+    $req = Join-Path $NodeDir 'requirements.txt'
+    if (-not (Test-Path $req)) { return }
+
+    $name = Split-Path $NodeDir -Leaf
+
+    # Determine target: use venv python if provided and exists, otherwise skip
+    # (requirements will be picked up by Step 11's pip install loop)
+    $venvPy = if ($VenvDir) { Join-Path $VenvDir 'Scripts\python.exe' } else { $null }
+    if (-not $venvPy -or -not (Test-Path $venvPy)) {
+        Write-Host "[custom_nodes] Venv not ready; skipping requirements for $name (will install in Step 11)"
+        return
+    }
+
+    Write-Host ""
+    Write-Host "[custom_nodes] Installing requirements for $name..."
+    & $UvExe pip install --python $venvPy -r $req
+    if ($LASTEXITCODE -ne 0) {
+        Write-Warning "Failed to install requirements for $name"
+        if ($Strict) { $script:failed = $true }
+    }
+}ts into the active uv environment.
 
 .PARAMETER ListFile
     Path to the custom_nodes.txt file. Each non-comment line is a git URL,

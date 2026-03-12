@@ -209,17 +209,22 @@ goto :after_primary_install
 :install_source_primary
 echo.
 echo Preparing ComfyUI source checkout...
+echo [DBG A]
 call :EnsureComfyUiRepo
+echo [DBG B] errorlevel=%errorlevel%
 if errorlevel 1 ( set "EXITCODE=2" & goto :Exit )
+echo [DBG C]
 if not exist "%COMFY_SRC%\main.py" (
   echo ERROR: ComfyUI not found at "%COMFY_SRC%\main.py"
   set "EXITCODE=2" & goto :Exit
 )
+echo [DBG D]
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
 (
   echo(comfyui:
   echo(  base_path: '%COMFY_DATA_YAML%'
 ) > "%COMFY_SRC%\extra_model_paths.yaml"
+echo [DBG E]
 goto :after_primary_install
 
 :after_primary_install

@@ -328,7 +328,7 @@ REM ============================================================
 echo.
 echo [Step 9] Handling model torrents...
 if not defined QBT_EXE echo WARNING: qBittorrent not found; skipping torrent step.
-if defined QBT_EXE powershell -NoProfile -ExecutionPolicy RemoteSigned -Command "& { & '%SCRIPT_DIR%scripts\Handle-Torrents.ps1' -TorrentDir '%SCRIPT_DIR%' -SavePath '%COMFY_DATA%' -QbtExe '%QBT_EXE%' }"
+if defined QBT_EXE powershell -NoProfile -ExecutionPolicy RemoteSigned -Command "& '%SCRIPT_DIR%scripts\Handle-Torrents.ps1' -TorrentDir '%SCRIPT_DIR%' -SavePath '%COMFY_DATA%' -QbtExe '%QBT_EXE%'"
 
 REM ============================================================
 REM STEP 10 -- NVIDIA driver

@@ -23,6 +23,16 @@ $ErrorActionPreference = 'Continue'
 $wanted = $Tools -split ',' | ForEach-Object { $_.Trim().ToLower() }
 $results = @{}
 
+function Update-SessionPath {
+    # Re-reads Machine + User PATH from the registry and applies it to the
+    # current process. Necessary after winget installs so Get-Command can
+    # find newly installed binaries without restarting the shell.
+    $machinePath = [System.Environment]::GetEnvironmentVariable('PATH', 'Machine')
+    $userPath    = [System.Environment]::GetEnvironmentVariable('PATH', 'User')
+    $combined    = ($machinePath, $userPath | Where-Object { $_ }) -join ';'
+    $env:PATH    = $combined
+}
+
 function Find-Exe {
     param([string[]]$Names, [string[]]$KnownPaths)
     foreach ($n in $Names) {
@@ -43,6 +53,8 @@ function Install-Winget {
     }
     Write-Host "Installing $Label via winget ($Id)..."
     winget install --id $Id -e --source winget --accept-source-agreements --accept-package-agreements
+    # Refresh PATH so the newly installed binary is visible in this session
+    Update-SessionPath
     return $LASTEXITCODE -eq 0
 }
 
@@ -86,8 +98,10 @@ if ($wanted -contains 'git') {
 if ($wanted -contains 'uv') {
     $knownUv = @(
         "$env:LocalAppData\Microsoft\WinGet\Links\uv.exe",
+        "$env:LocalAppData\uv\uv.exe",                      # uv's own installer (irm astral.sh)
         "$env:LocalAppData\Programs\uv\uv.exe",
-        "$env:ProgramFiles\uv\uv.exe"
+        "$env:ProgramFiles\uv\uv.exe",
+        "$env:USERPROFILE\.cargo\bin\uv.exe"                 # cargo install fallback
     )
     $uv = Find-Exe -Names 'uv','uv.exe' -KnownPaths $knownUv
     if (-not $uv -and $InstallMissing) {

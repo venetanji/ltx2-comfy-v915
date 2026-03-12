@@ -220,6 +220,7 @@ echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
   echo(comfyui:
   echo(  base_path: '%COMFY_DATA_YAML%'
 ) > "%COMFY_SRC%\extra_model_paths.yaml"
+goto :after_primary_install
 
 :after_primary_install
 
@@ -472,16 +473,12 @@ exit /b 0
 
 :FindComfyDesktop
 set "COMFY_DESKTOP_EXE="
-for %%P in (
-  "%LocalAppData%\Programs\ComfyUI\ComfyUI.exe"
-  "%LocalAppData%\Programs\ComfyUI Desktop\ComfyUI.exe"
-  "%ProgramFiles%\ComfyUI\ComfyUI.exe"
-  "%ProgramFiles%\ComfyUI Desktop\ComfyUI.exe"
-  "%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe"
-  "%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe"
-) do (
-  if not defined COMFY_DESKTOP_EXE if exist "%%~P" set "COMFY_DESKTOP_EXE=%%~P"
-)
+if exist "%LocalAppData%\Programs\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%LocalAppData%\Programs\ComfyUI\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%LocalAppData%\Programs\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%LocalAppData%\Programs\ComfyUI Desktop\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles%\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles%\ComfyUI\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles%\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles%\ComfyUI Desktop\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles(x86)%\ComfyUI\ComfyUI.exe"
+if not defined COMFY_DESKTOP_EXE if exist "%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe" set "COMFY_DESKTOP_EXE=%ProgramFiles(x86)%\ComfyUI Desktop\ComfyUI.exe"
 exit /b 0
 
 :EnsureComfyUiRepo

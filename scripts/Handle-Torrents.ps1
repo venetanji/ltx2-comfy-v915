@@ -24,7 +24,7 @@ param(
 
 $ErrorActionPreference = 'Continue'
 
-# ── Find torrents ──────────────────────────────────────────────────────────────
+# -- Find torrents --
 $torrents = Get-ChildItem -Path $TorrentDir -Filter '*.torrent' -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -notlike $ExcludePattern }
 
@@ -39,7 +39,7 @@ if (-not (Test-Path $QbtExe)) {
     exit 1
 }
 
-# ── qBittorrent ini path ──────────────────────────────────────────────────────
+# -- qBittorrent ini path --
 $qbtIni  = Join-Path $env:AppData 'qBittorrent\qBittorrent.ini'
 $qbtDir  = Split-Path $qbtIni
 if (-not (Test-Path $qbtDir)) { New-Item -ItemType Directory $qbtDir -Force | Out-Null }
@@ -57,7 +57,7 @@ function Write-ConfigPatch {
     Write-Host "qBittorrent configured: NoSubfolder."
 }
 
-# ── Wait for qBittorrent to exit if running with stale config ─────────────────
+# -- Wait for qBittorrent to exit if running with stale config --
 $isRunning  = (Get-Process qbittorrent -ErrorAction SilentlyContinue) -ne $null
 $isPatched  = Test-ConfigPatched
 
@@ -72,13 +72,13 @@ if ($isRunning -and -not $isPatched) {
     Write-Host "Please CLOSE qBittorrent completely, then press Enter to continue..."
     Read-Host | Out-Null
     while (Get-Process qbittorrent -ErrorAction SilentlyContinue) {
-        Write-Host "Still running — press Enter again when closed..."
+        Write-Host "Still running - press Enter again when closed..."
         Read-Host | Out-Null
     }
     $isRunning = $false
 }
 
-# ── Patch config ──────────────────────────────────────────────────────────────
+# -- Patch config --
 if (-not (Test-ConfigPatched)) {
     if (-not (Test-Path $qbtIni)) {
         Set-Content -Path $qbtIni -Value ""
@@ -88,7 +88,7 @@ if (-not (Test-ConfigPatched)) {
     Write-Host "qBittorrent already configured (NoSubfolder); skipping patch."
 }
 
-# ── Launch qBittorrent and open torrents ──────────────────────────────────────
+# -- Launch qBittorrent and open torrents --
 Write-Host "Starting qBittorrent..."
 Start-Process $QbtExe
 Start-Sleep 2
@@ -103,5 +103,5 @@ foreach ($t in $torrents) {
 
 Write-Host ""
 Write-Host "NOTE: Torrents should contain a 'models' folder."
-Write-Host "      Saving into '$SavePath' merges into '$SavePath\models'."
+Write-Host "      Saving into $SavePath merges into $SavePath\models."
 exit 0

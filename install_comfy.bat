@@ -209,24 +209,22 @@ goto :after_primary_install
 :install_source_primary
 echo.
 echo Preparing ComfyUI source checkout...
-echo [DBG A] COMFY_SRC="%COMFY_SRC%" GIT_EXE="%GIT_EXE%"
-REM Inline EnsureComfyUiRepo to bypass call :label
 if not defined GIT_EXE ( echo ERROR: git not found. & set "EXITCODE=2" & goto :Exit )
 if exist "%COMFY_SRC%\.git" (
   echo Updating ComfyUI repo...
   "%GIT_EXE%" -C "%COMFY_SRC%" pull
+  if errorlevel 1 ( echo WARNING: git pull failed, continuing with existing checkout. )
+) else (
+  echo Cloning ComfyUI into "%COMFY_SRC%"...
+  "%GIT_EXE%" clone --depth 1 "%COMFYUI_REPO_URL%" "%COMFY_SRC%"
+  if errorlevel 1 ( echo ERROR: git clone failed. & set "EXITCODE=2" & goto :Exit )
 )
-echo [DBG B] after inline update
-if errorlevel 1 ( set "EXITCODE=2" & goto :Exit )
-echo [DBG C]
 if not exist "%COMFY_SRC%\main.py" (
-  echo ERROR: ComfyUI not found at "%COMFY_SRC%\main.py"
+  echo ERROR: ComfyUI not found at "%COMFY_SRC%\main.py" after clone/pull.
   set "EXITCODE=2" & goto :Exit
 )
-echo [DBG D]
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
 powershell -NoProfile -Command "Set-Content -Path '%COMFY_SRC%\extra_model_paths.yaml' -Value ('comfyui:' + [char]10 + '  base_path: ' + [char]39 + '%COMFY_DATA_YAML%' + [char]39) -Encoding UTF8"
-echo [DBG E]
 goto :after_primary_install
 
 :after_primary_install

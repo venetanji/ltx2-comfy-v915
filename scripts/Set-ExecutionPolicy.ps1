@@ -51,7 +51,7 @@ Write-Host ""
 Write-Host "Launching OpenClaw installer in a new window..."
 Start-Process powershell -ArgumentList @(
     '-NoProfile',
-    '-ExecutionPolicy', 'RemoteSigned',
+    '-ExecutionPolicy', 'Bypass',
     '-File', $openClawScript,
     '-SkillsSource', $SkillsSource,
     '-Wait'

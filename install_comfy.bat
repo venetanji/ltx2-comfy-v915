@@ -72,7 +72,7 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
     if exist "%INSTALLER_REPO%\.git" (
       "!GIT_EXE!" -C "%INSTALLER_REPO%" pull
     ) else (
-      if exist "%INSTALLER_REPO%\" (
+      if exist "%INSTALLER_REPO%" (
         echo WARNING: "%INSTALLER_REPO%" exists but is not a git repo. Please delete it and re-run.
         set "EXITCODE=2" & goto :Exit
       )
@@ -95,9 +95,9 @@ if /i not "%COMFY_BOOTSTRAPPED%"=="1" (
 REM ============================================================
 REM STEP 1 -- Create shared folders
 REM ============================================================
-if not exist "%COMFY_DATA%\"        mkdir "%COMFY_DATA%"        >nul 2>nul
-if not exist "%CUSTOM_NODES_DIR%\"  mkdir "%CUSTOM_NODES_DIR%"  >nul 2>nul
-if not exist "%WORKFLOWS_DIR%\"     mkdir "%WORKFLOWS_DIR%"     >nul 2>nul
+if not exist "%COMFY_DATA%"        mkdir "%COMFY_DATA%"        >nul 2>nul
+if not exist "%CUSTOM_NODES_DIR%"  mkdir "%CUSTOM_NODES_DIR%"  >nul 2>nul
+if not exist "%WORKFLOWS_DIR%"     mkdir "%WORKFLOWS_DIR%"     >nul 2>nul
 
 echo.
 echo Shared ComfyUI data folder : "%COMFY_DATA%"
@@ -263,10 +263,10 @@ if errorlevel 1 (
 REM ============================================================
 REM STEP 6 -- Copy workflows
 REM ============================================================
-if exist "%SCRIPT_DIR%workflows\" (
+if exist "%SCRIPT_DIR%workflows" (
   echo.
   echo [Step 6] Syncing workflows into "%WORKFLOWS_DIR%"...
-  xcopy "%SCRIPT_DIR%workflows\*" "%WORKFLOWS_DIR%\" /E /I /Y >nul
+  xcopy "%SCRIPT_DIR%workflows\*" "%WORKFLOWS_DIR%" /E /I /Y >nul
 )
 
 REM ============================================================
@@ -394,7 +394,7 @@ if "%FAILED%"=="0" (
 
     REM Pre-create the user/ dir so SQLite can open comfyui.db on first run.
     REM ComfyUI always places the DB at <src>/user/comfyui.db regardless of --base-directory.
-    if not exist "%COMFY_SRC%\user\" mkdir "%COMFY_SRC%\user" >nul 2>nul
+    if not exist "%COMFY_SRC%\user" mkdir "%COMFY_SRC%\user" >nul 2>nul
 
     REM Build a safe sqlite:/// URL using forward slashes (avoids backslash issues on Windows).
     set "COMFY_DB_PATH=%COMFY_SRC%\user\comfyui.db"
@@ -496,7 +496,7 @@ if exist "%COMFY_SRC%\.git" (
   )
   exit /b 0
 )
-if exist "%COMFY_SRC%\" (
+if exist "%COMFY_SRC%" (
   echo ERROR: "%COMFY_SRC%" exists but is not a git repo. Delete it and re-run.
   exit /b 1
 )

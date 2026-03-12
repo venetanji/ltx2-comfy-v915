@@ -28,7 +28,7 @@ param(
 
 $ErrorActionPreference = 'Continue'
 
-# ── Detect installed driver version ──────────────────────────────────────────
+# -- Detect installed driver version ------------------------------------------
 $vc = Get-CimInstance Win32_VideoController -ErrorAction SilentlyContinue |
       Where-Object { $_.Name -match 'NVIDIA' } |
       Select-Object -First 1
@@ -62,7 +62,7 @@ if ($installedVersion) {
     Write-Warning "Could not parse installed driver version; proceeding with install."
 }
 
-# ── Locate installer ──────────────────────────────────────────────────────────
+# -- Locate installer ---------------------------------------------------------
 $localExePattern = Join-Path $ScriptDir '*.exe'
 $localExe = Get-Item $localExePattern -ErrorAction SilentlyContinue |
             Where-Object { $_.Name -match '591' } |
@@ -121,7 +121,7 @@ if (Test-Path $driverExe) {
             if (-not (Test-Path $dlDir)) { New-Item -ItemType Directory $dlDir | Out-Null }
             Start-Process $QbtExe
             Start-Sleep 2
-            Start-Process $QbtExe -ArgumentList "--skip-dialog=true --save-path=`"$dlDir`" `"$torrentFile`""
+            Start-Process $QbtExe -ArgumentList "--skip-dialog=true --save-path=``"$dlDir``" ``"$torrentFile``""
             Write-Host "Waiting for download to finish. Press Enter when done..."
             Read-Host | Out-Null
             $found = Get-ChildItem $dlDir -Recurse -Filter '*.exe' | Select-Object -First 1
@@ -150,10 +150,10 @@ if (Test-Path $driverExe) {
     }
 }
 
-# ── Run installer ─────────────────────────────────────────────────────────────
+# -- Run installer ------------------------------------------------------------
 Write-Host ""
 Write-Host "Launching NVIDIA driver installer..."
-Write-Host "IMPORTANT: DO NOT REBOOT — lab machines reset on reboot."
+Write-Host "IMPORTANT: DO NOT REBOOT -- lab machines reset on reboot."
 Write-Host "If the installer asks to reboot, close it without rebooting."
 
 $proc = Start-Process $driverExe -ArgumentList '-s' -Wait -PassThru

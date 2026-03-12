@@ -1,9 +1,8 @@
 <#
 .SYNOPSIS
-    Patches ComfyUI Manager's config.ini to enable automatic dependency
-    installation (security_level=weak, auto_install_reqs=True).
-
+    Creates or patches ComfyUI Manager's config.ini with the desired settings.
     Safe to run multiple times (idempotent key/value update).
+    Will create the file (and parent directory) if it does not exist yet.
 
 .PARAMETER ComfySrc
     Path to the ComfyUI source checkout (e.g. Documents\comfyui-git).
@@ -12,8 +11,8 @@
     Path to the shared ComfyUI data folder (e.g. Documents\ComfyUI).
 
 .NOTES
-    The Manager generates config.ini on first run. This script should be
-    called after ComfyUI has been launched at least once.
+    Manager stores config at: <ComfyData>\user\__manager\config.ini
+    Fallback legacy paths are also patched if present.
 #>
 param(
     [Parameter(Mandatory)][string]$ComfySrc,
@@ -24,22 +23,47 @@ $ErrorActionPreference = 'Continue'
 
 # Settings to enforce (key -> value)
 $desired = [ordered]@{
-    'security_level'    = 'weak'
-    'auto_install_reqs' = 'True'
+    'git_exe'            = ''
+    'use_uv'             = 'True'
+    'security_level'     = 'normal'
+    'network_mode'       = 'personal_cloud'
+    'db_mode'            = 'cache'
+    'file_logging'       = 'True'
+    'always_lazy_install'= 'False'
 }
 
-# Candidate config locations (Manager uses different paths depending on version / install type)
-$candidates = @(
+# Primary path (current Manager stores config here)
+$primaryDir = Join-Path $ComfyData 'user\__manager'
+$primaryIni = Join-Path $primaryDir 'config.ini'
+
+# Legacy / alternative locations to patch if they already exist
+$legacyCandidates = @(
     (Join-Path $ComfySrc  'custom_nodes\ComfyUI-Manager\config.ini'),
     (Join-Path $ComfyData 'custom_nodes\ComfyUI-Manager\config.ini'),
     (Join-Path $ComfyData 'user\default\ComfyUI-Manager\config.ini')
 )
 
 function Update-IniFile {
-    param([string]$Path)
+    param([string]$Path, [bool]$CreateIfMissing = $false)
 
-    Write-Host "Patching: $Path"
-    $lines = if (Test-Path $Path) { Get-Content $Path } else { @() }
+    if (-not (Test-Path $Path)) {
+        if (-not $CreateIfMissing) { return $false }
+        $dir = Split-Path $Path
+        if (-not (Test-Path $dir)) {
+            New-Item -ItemType Directory -Path $dir -Force | Out-Null
+        }
+        Write-Host "Creating: $Path"
+        # Start with a minimal [default] section
+        $lines = @('[default]')
+    } else {
+        Write-Host "Patching: $Path"
+        $lines = Get-Content $Path
+    }
+
+    # Ensure [default] section exists
+    if (-not ($lines -match '^\[default\]')) {
+        $lines = @('[default]') + $lines
+    }
 
     foreach ($key in $desired.Keys) {
         $val   = $desired[$key]
@@ -56,20 +80,18 @@ function Update-IniFile {
     }
 
     Set-Content -Path $Path -Value $lines -Encoding UTF8
-    Write-Host "  -> security_level = weak, auto_install_reqs = True"
+    Write-Host "  -> Done (security_level=normal, network_mode=personal_cloud, use_uv=True)"
+    return $true
 }
 
-$patched = 0
-foreach ($ini in $candidates) {
+# Always ensure primary config exists and is patched
+Update-IniFile -Path $primaryIni -CreateIfMissing $true | Out-Null
+
+# Patch legacy locations if they exist
+foreach ($ini in $legacyCandidates) {
     if (Test-Path $ini) {
-        Update-IniFile $ini
-        $patched++
+        Update-IniFile -Path $ini -CreateIfMissing $false | Out-Null
     }
-}
-
-if ($patched -eq 0) {
-    Write-Warning "No ComfyUI Manager config.ini found. Run ComfyUI once to generate it, then re-run this script."
-    exit 1
 }
 
 exit 0

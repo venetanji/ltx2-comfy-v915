@@ -20,3 +20,6 @@ https://github.com/evanspearman/ComfyMath
 https://github.com/pythongosssss/ComfyUI-Custom-Scripts
 https://github.com/1038lab/ComfyUI-QwenTTS
 https://github.com/kijai/ComfyUI-MelBandRoFormer
+https://github.com/melMass/comfy_mtb
+https://github.com/yolain/ComfyUI-Easy-Use
+https://github.com/cubiq/ComfyUI_essentials

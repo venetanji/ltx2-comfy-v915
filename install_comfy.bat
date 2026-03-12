@@ -351,10 +351,10 @@ REM ============================================================
 if /i not "%COMFY_DISABLE_NVIDIA_DRIVER%"=="1" (
   echo.
   echo [Step 10] NVIDIA driver check (target 591.86)
-  set "NVIDIA_PS_ARGS=-File ""%SCRIPT_DIR%scripts\Install-NvidiaDriver.ps1"" -ScriptDir ""%SCRIPT_DIR%"""
-  if defined QBT_EXE set "NVIDIA_PS_ARGS=!NVIDIA_PS_ARGS! -QbtExe ""%QBT_EXE%"""
-  if /i "%COMFY_NONINTERACTIVE%"=="1" set "NVIDIA_PS_ARGS=!NVIDIA_PS_ARGS! -NonInteractive"
-  powershell -NoProfile -ExecutionPolicy RemoteSigned !NVIDIA_PS_ARGS!
+  set "NVIDIA_CMD=& '%SCRIPT_DIR%scripts\Install-NvidiaDriver.ps1' -ScriptDir '%SCRIPT_DIR%'"
+  if defined QBT_EXE set "NVIDIA_CMD=!NVIDIA_CMD! -QbtExe '%QBT_EXE%'"
+  if /i "%COMFY_NONINTERACTIVE%"=="1" set "NVIDIA_CMD=!NVIDIA_CMD! -NonInteractive"
+  powershell -NoProfile -ExecutionPolicy RemoteSigned -Command "!NVIDIA_CMD!"
 )
 
 REM ============================================================
@@ -429,17 +429,13 @@ if "%FAILED%"=="0" (
     REM ComfyUI always places the DB at <src>/user/comfyui.db regardless of --base-directory.
     if not exist "%COMFY_SRC%\user" mkdir "%COMFY_SRC%\user" >nul 2>nul
 
-    REM Build a safe sqlite:/// URL using forward slashes (avoids backslash issues on Windows).
-    set "COMFY_DB_PATH=%COMFY_SRC%\user\comfyui.db"
-    set "COMFY_DB_URL=sqlite:///%COMFY_DB_PATH:\=/%"
-
     REM Launch a background watcher that polls localhost:8188 and opens the
     REM browser as soon as ComfyUI responds -- avoids the 0.0.0.0 confusion.
     powershell -NoProfile -ExecutionPolicy RemoteSigned -WindowStyle Hidden -Command ^
       "Start-Job -ScriptBlock { $url='http://localhost:8188'; $max=120; $i=0; while($i -lt $max){ try{ $r=(Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop); if($r.StatusCode -lt 500){ Start-Process $url; break } }catch{}; Start-Sleep 2; $i++ } } | Out-Null"
 
     set "GIT_PYTHON_GIT_EXECUTABLE=%GIT_EXE%"
-    call "%UV_EXE%" run python main.py --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%" --database-url "!COMFY_DB_URL!"
+    call "%UV_EXE%" run python main.py --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%"
     set "EXITCODE=%ERRORLEVEL%"
     popd
 

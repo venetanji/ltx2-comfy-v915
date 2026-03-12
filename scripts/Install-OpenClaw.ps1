@@ -20,11 +20,16 @@ $ErrorActionPreference = 'Continue'
 
 # -- Install OpenClaw ----------------------------------------------------------
 Write-Host ""
-Write-Host "Installing OpenClaw..."
-try {
-    iwr -useb https://openclaw.ai/install.ps1 | iex
-} catch {
-    Write-Warning "OpenClaw installer failed: $_"
+$openClawCmd = Get-Command openclaw -ErrorAction SilentlyContinue
+if ($openClawCmd) {
+    Write-Host "OpenClaw already installed: $($openClawCmd.Source) -- skipping install."
+} else {
+    Write-Host "Installing OpenClaw..."
+    try {
+        iwr -useb https://openclaw.ai/install.ps1 | iex
+    } catch {
+        Write-Warning "OpenClaw installer failed: $_"
+    }
 }
 
 # -- Copy skills ---------------------------------------------------------------

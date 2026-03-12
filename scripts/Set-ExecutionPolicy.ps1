@@ -17,18 +17,31 @@ param(
 $ErrorActionPreference = 'Continue'
 
 # ── Execution policy ──────────────────────────────────────────────────────────
+# NOTE: All powershell invocations in install_comfy.bat use -ExecutionPolicy Bypass,
+# so this step is best-effort only. GPO at MachinePolicy/UserPolicy scope will
+# override CurrentUser/LocalMachine settings -- that is fine, we just skip.
 $permissive = @('RemoteSigned', 'Unrestricted', 'Bypass')
-$current = Get-ExecutionPolicy -Scope CurrentUser
+$effective  = Get-ExecutionPolicy   # effective (all scopes merged)
+$current    = Get-ExecutionPolicy -Scope CurrentUser
 
-if ($permissive -contains $current) {
-    Write-Host "PowerShell execution policy already sufficient: $current"
+if ($permissive -contains $effective) {
+    Write-Host "PowerShell execution policy already sufficient: $effective"
 } else {
-    Write-Host "Setting execution policy to RemoteSigned for current user (was: $current)..."
-    try {
-        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-        Write-Host "Execution policy set to RemoteSigned."
-    } catch {
-        Write-Warning "Failed to set execution policy: $_"
+    Write-Host "Attempting to set execution policy to RemoteSigned (current user)..."
+    $set = $false
+    foreach ($scope in @('CurrentUser', 'LocalMachine')) {
+        try {
+            Set-ExecutionPolicy -Scope $scope -ExecutionPolicy RemoteSigned -Force -ErrorAction Stop
+            Write-Host "Execution policy set to RemoteSigned at scope: $scope"
+            $set = $true
+            break
+        } catch {
+            Write-Host "Could not set at scope $scope (may be GPO-locked): $($_.Exception.Message.Split([char]10)[0])"
+        }
+    }
+    if (-not $set) {
+        Write-Host "NOTE: Execution policy is controlled by Group Policy. This is OK --"
+        Write-Host "      install_comfy.bat invokes all scripts with -ExecutionPolicy Bypass."
     }
 }
 

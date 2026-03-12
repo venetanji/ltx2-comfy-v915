@@ -281,7 +281,8 @@ powershell -NoProfile -ExecutionPolicy RemoteSigned ^
   -ListFile "%CUSTOM_NODES_LIST%" ^
   -DestDir  "%CUSTOM_NODES_DIR%" ^
   -UvExe   "%UV_EXE%" ^
-  -GitExe  "%GIT_EXE%"
+  -GitExe  "%GIT_EXE%" ^
+  -VenvDir  "%COMFY_SRC%\.venv"
 if errorlevel 1 (
   if "%STRICT_CUSTOM_NODE_REQUIREMENTS%"=="1" (
     set "FAILED=1"
@@ -358,6 +359,14 @@ if exist ".venv\Scripts\python.exe" (
     call "%UV_EXE%" venv --python 3.12
   )
   if errorlevel 1 ( set "FAILED=1" & echo ERROR: Failed to create venv. )
+)
+
+echo Installing custom node requirements into venv...
+for /d %%D in ("%CUSTOM_NODES_DIR%\*") do (
+  if exist "%%~fD\requirements.txt" (
+    call "%UV_EXE%" pip install --python "%COMFY_SRC%\.venv\Scripts\python.exe" -r "%%~fD\requirements.txt"
+    if errorlevel 1 echo WARNING: requirements failed for %%~nD
+  )
 )
 
 echo Installing torch + torchvision + torchaudio (CUDA 13.0 wheels)...

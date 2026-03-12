@@ -225,6 +225,19 @@ if not exist "%COMFY_SRC%\main.py" (
 )
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
 powershell -NoProfile -Command "Set-Content -Path '%COMFY_SRC%\extra_model_paths.yaml' -Value ('comfyui:' + [char]10 + '  base_path: ' + [char]39 + '%COMFY_DATA_YAML%' + [char]39) -Encoding UTF8"
+
+echo Creating Python venv in "%COMFY_SRC%"...
+if not exist "%COMFY_SRC%\.venv\Scripts\python.exe" (
+  call "%UV_EXE%" venv --python 3.12 "%COMFY_SRC%\.venv"
+  if errorlevel 1 (
+    echo uv venv failed; attempting "uv python install 3.12" then retry...
+    call "%UV_EXE%" python install 3.12
+    call "%UV_EXE%" venv --python 3.12 "%COMFY_SRC%\.venv"
+  )
+  if errorlevel 1 ( echo WARNING: Failed to create venv; custom node requirements will be skipped. )
+) else (
+  echo Existing venv found; reusing.
+)
 goto :after_primary_install
 
 :after_primary_install
@@ -315,11 +328,8 @@ REM ============================================================
 echo.
 echo [Step 9] Handling model torrents...
 if defined QBT_EXE (
-  powershell -NoProfile -ExecutionPolicy RemoteSigned ^
-    -File "%SCRIPT_DIR%scripts\Handle-Torrents.ps1" ^
-    -TorrentDir "%SCRIPT_DIR%" ^
-    -SavePath   "%COMFY_DATA%" ^
-    -QbtExe     "%QBT_EXE%"
+  set "TORRENTS_ARGS=-File "%SCRIPT_DIR%scripts\Handle-Torrents.ps1" -TorrentDir "%SCRIPT_DIR%" -SavePath "%COMFY_DATA%" -QbtExe "%QBT_EXE%""
+  powershell -NoProfile -ExecutionPolicy RemoteSigned !TORRENTS_ARGS!
 ) else (
   echo WARNING: qBittorrent not found; skipping torrent step.
 )
@@ -349,9 +359,8 @@ echo.
 echo [Step 11] Setting up Python environment in "%COMFY_SRC%"...
 pushd "%COMFY_SRC%"
 
-if exist ".venv\Scripts\python.exe" (
-  echo Existing venv found; reusing.
-) else (
+if not exist ".venv\Scripts\python.exe" (
+  echo Venv missing; creating now...
   call "%UV_EXE%" venv --python 3.12
   if errorlevel 1 (
     echo uv venv failed; attempting "uv python install 3.12" then retry...
@@ -359,6 +368,8 @@ if exist ".venv\Scripts\python.exe" (
     call "%UV_EXE%" venv --python 3.12
   )
   if errorlevel 1 ( set "FAILED=1" & echo ERROR: Failed to create venv. )
+) else (
+  echo Existing venv found; reusing.
 )
 
 echo Installing custom node requirements into venv...

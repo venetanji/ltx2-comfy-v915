@@ -158,7 +158,7 @@ echo   2^) Source (git clone + Python deps)  [advanced / for devs]
 if /i "%COMFY_NONINTERACTIVE%"=="1" (
   set "INSTALL_MODE=2"
 ) else (
-  echo (Auto-selecting default in 5 seconds...)
+  echo(Auto-selecting default in 5 seconds...)
   choice /c 12 /n /t 5 /d 2 /m "Choice [1-2] (default 2): "
   if errorlevel 2 (set "INSTALL_MODE=2") else (set "INSTALL_MODE=1")
 )
@@ -229,7 +229,7 @@ if "%INSTALL_MODE%"=="1" (
     echo.
     set "INSTALL_SOURCE_TOO=N"
     if /i not "%COMFY_NONINTERACTIVE%"=="1" (
-      echo (Auto-selecting default in 5 seconds...)
+      echo(Auto-selecting default in 5 seconds...)
       choice /c YN /n /t 5 /d N /m "Also install ComfyUI source? [Y/N] (default N): "
       if errorlevel 2 (set "INSTALL_SOURCE_TOO=N") else (set "INSTALL_SOURCE_TOO=Y")
     )
@@ -385,7 +385,7 @@ if "%FAILED%"=="0" (
     echo.
     echo Starting ComfyUI...
     echo ComfyUI will be available at: http://localhost:8188
-    echo (Browser will open automatically once the server is ready)
+    echo(Browser will open automatically once the server is ready)
 
     REM Pre-create the user/ dir so SQLite can open comfyui.db on first run.
     REM ComfyUI always places the DB at <src>/user/comfyui.db regardless of --base-directory.

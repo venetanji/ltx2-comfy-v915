@@ -116,7 +116,7 @@ REM STEP 3 -- Find / install tools (git, uv, qBittorrent)
 REM ============================================================
 echo.
 echo [Step 3] Locating required tools...
-
+  
 REM Use Find-Tools.ps1 to install missing tools via winget (it refreshes PATH too).
 REM We don't rely on its output file for paths -- we resolve them ourselves below
 REM to avoid FOR /F splitting issues with spaces in paths.
@@ -217,8 +217,8 @@ if not exist "%COMFY_SRC%\main.py" (
 )
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
 (
-  echo comfyui:
-  echo   base_path: '%COMFY_DATA_YAML%'
+  echo(comfyui:
+  echo(  base_path: '%COMFY_DATA_YAML%'
 ) > "%COMFY_SRC%\extra_model_paths.yaml"
 
 :after_primary_install
@@ -238,8 +238,8 @@ if "%INSTALL_MODE%"=="1" (
       call :EnsureComfyUiRepo
       if exist "%COMFY_SRC%\main.py" (
         (
-          echo comfyui:
-          echo   base_path: '%COMFY_DATA_YAML%'
+          echo(comfyui:
+          echo(  base_path: '%COMFY_DATA_YAML%'
         ) > "%COMFY_SRC%\extra_model_paths.yaml"
       )
     )

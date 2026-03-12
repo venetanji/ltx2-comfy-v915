@@ -225,7 +225,7 @@ if not exist "%COMFY_SRC%\main.py" (
 )
 echo [DBG D]
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
-powershell -NoProfile -Command "Set-Content '%COMFY_SRC%\extra_model_paths.yaml' \"comfyui:`n  base_path: '%COMFY_DATA_YAML%'\" -Encoding UTF8"
+powershell -NoProfile -Command "Set-Content -Path '%COMFY_SRC%\extra_model_paths.yaml' -Value ('comfyui:' + [char]10 + '  base_path: ' + [char]39 + '%COMFY_DATA_YAML%' + [char]39) -Encoding UTF8"
 echo [DBG E]
 goto :after_primary_install
 
@@ -245,7 +245,7 @@ if "%INSTALL_MODE%"=="1" (
       set "DO_SOURCE=1"
       call :EnsureComfyUiRepo
       if exist "%COMFY_SRC%\main.py" (
-        powershell -NoProfile -Command "Set-Content '%COMFY_SRC%\extra_model_paths.yaml' \"comfyui:`n  base_path: '%COMFY_DATA_YAML%'\" -Encoding UTF8"
+        powershell -NoProfile -Command "Set-Content -Path '%COMFY_SRC%\extra_model_paths.yaml' -Value ('comfyui:' + [char]10 + '  base_path: ' + [char]39 + '%COMFY_DATA_YAML%' + [char]39) -Encoding UTF8"
       )
     )
   )

@@ -216,8 +216,10 @@ if not exist "%COMFY_SRC%\main.py" (
   set "EXITCODE=2" & goto :Exit
 )
 echo Writing "%COMFY_SRC%\extra_model_paths.yaml"...
->  "%COMFY_SRC%\extra_model_paths.yaml" echo comfyui:
->> "%COMFY_SRC%\extra_model_paths.yaml" echo   base_path: '%COMFY_DATA_YAML%'
+(
+  echo comfyui:
+  echo   base_path: '%COMFY_DATA_YAML%'
+) > "%COMFY_SRC%\extra_model_paths.yaml"
 
 :after_primary_install
 

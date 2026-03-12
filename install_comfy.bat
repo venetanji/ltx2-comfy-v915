@@ -243,7 +243,11 @@ if "%INSTALL_MODE%"=="1" (
     )
     if /i "%INSTALL_SOURCE_TOO%"=="Y" (
       set "DO_SOURCE=1"
-      call :EnsureComfyUiRepo
+      if exist "%COMFY_SRC%\.git" (
+        "%GIT_EXE%" -C "%COMFY_SRC%" pull
+      ) else (
+        "%GIT_EXE%" clone --depth 1 "%COMFYUI_REPO_URL%" "%COMFY_SRC%"
+      )
       if exist "%COMFY_SRC%\main.py" (
         powershell -NoProfile -Command "Set-Content -Path '%COMFY_SRC%\extra_model_paths.yaml' -Value ('comfyui:' + [char]10 + '  base_path: ' + [char]39 + '%COMFY_DATA_YAML%' + [char]39) -Encoding UTF8"
       )
@@ -254,10 +258,10 @@ if "%INSTALL_MODE%"=="1" (
 REM Ensure source checkout always exists (start_comfyui_git.bat depends on it)
 echo.
 echo Ensuring ComfyUI source checkout exists...
-call :EnsureComfyUiRepo
-if errorlevel 1 (
-  echo WARNING: Could not prepare ComfyUI source checkout.
-  echo          start_comfyui_git.bat will not work until this is fixed.
+if exist "%COMFY_SRC%\.git" (
+  "%GIT_EXE%" -C "%COMFY_SRC%" pull >nul 2>nul
+) else (
+  echo WARNING: ComfyUI source not found. start_comfyui_git.bat will not work.
 )
 
 REM ============================================================

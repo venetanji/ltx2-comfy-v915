@@ -55,8 +55,25 @@ if not exist "%COMFY_DATA%" (
   mkdir "%COMFY_DATA%" >nul 2>nul
 )
 
+echo.
+echo Starting ComfyUI...
+echo ComfyUI will be available at: http://localhost:8188
+echo (Browser will open automatically once the server is ready)
+
+REM Pre-create the user/ dir so SQLite can open comfyui.db on first run.
+REM ComfyUI always places the DB at <src>/user/comfyui.db regardless of --base-directory.
+if not exist "%COMFY_DIR%\user\" mkdir "%COMFY_DIR%\user" >nul 2>nul
+
+REM Build a safe sqlite:/// URL using forward slashes (avoids backslash issues on Windows).
+set "COMFY_DB_PATH=%COMFY_DIR%\user\comfyui.db"
+set "COMFY_DB_URL=sqlite:///%COMFY_DB_PATH:\=/%"
+
+REM Poll localhost:8188 in the background; open browser as soon as it responds.
+powershell -NoProfile -ExecutionPolicy RemoteSigned -WindowStyle Hidden -Command ^
+  "Start-Job -ScriptBlock { $url='http://localhost:8188'; $max=120; $i=0; while($i -lt $max){ try{ $r=(Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop); if($r.StatusCode -lt 500){ Start-Process $url; break } }catch{}; Start-Sleep 2; $i++ } } | Out-Null"
+
 pushd "%COMFY_DIR%"
-"%UV_EXE%" run python main.py --port 8188 --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%"
+"%UV_EXE%" run python main.py --port 8188 --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%" --database-url "!COMFY_DB_URL!"
 set "EXITCODE=%ERRORLEVEL%"
 popd
 

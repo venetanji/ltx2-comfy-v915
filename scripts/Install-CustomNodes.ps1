@@ -24,6 +24,7 @@ param(
     [Parameter(Mandatory)][string]$DestDir,
     [string]$UvExe   = 'uv',
     [string]$GitExe  = 'git',
+    [string]$VenvDir = '',
     [switch]$Strict
 )
 

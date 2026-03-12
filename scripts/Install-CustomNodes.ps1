@@ -1,29 +1,7 @@
 <#
 .SYNOPSIS
     Clones or updates custom nodes listed in a text file, then installs their
-    Pytfunction Install-NodeRequirements {
-    param([string]$NodeDir)
-    $req = Join-Path $NodeDir 'requirements.txt'
-    if (-not (Test-Path $req)) { return }
-
-    $name = Split-Path $NodeDir -Leaf
-
-    # Determine target: use venv python if provided and exists, otherwise skip
-    # (requirements will be picked up by Step 11's pip install loop)
-    $venvPy = if ($VenvDir) { Join-Path $VenvDir 'Scripts\python.exe' } else { $null }
-    if (-not $venvPy -or -not (Test-Path $venvPy)) {
-        Write-Host "[custom_nodes] Venv not ready; skipping requirements for $name (will install in Step 11)"
-        return
-    }
-
-    Write-Host ""
-    Write-Host "[custom_nodes] Installing requirements for $name..."
-    & $UvExe pip install --python $venvPy -r $req
-    if ($LASTEXITCODE -ne 0) {
-        Write-Warning "Failed to install requirements for $name"
-        if ($Strict) { $script:failed = $true }
-    }
-}ts into the active uv environment.
+    Python requirements into the specified uv-managed venv.
 
 .PARAMETER ListFile
     Path to the custom_nodes.txt file. Each non-comment line is a git URL,
@@ -37,6 +15,10 @@
 
 .PARAMETER GitExe
     Path to the git executable. If omitted, tries git on PATH.
+
+.PARAMETER VenvDir
+    Path to the .venv directory created by "uv venv" (e.g. %COMFY_SRC%\.venv).
+    If omitted or the venv does not yet exist, requirements install is skipped.
 
 .PARAMETER Strict
     Exit non-zero if any requirements.txt install fails.
@@ -127,19 +109,29 @@ function Install-NodeRequirements {
     if (-not (Test-Path $req)) { return }
 
     $name = Split-Path $NodeDir -Leaf
+
+    # Resolve venv python.exe - must exist before we can install
+    $venvPy = $null
+    if ($VenvDir) { $venvPy = Join-Path $VenvDir 'Scripts\python.exe' }
+
+    if (-not $venvPy -or -not (Test-Path $venvPy)) {
+        Write-Host "[custom_nodes] Venv not ready; skipping requirements for $name"
+        return
+    }
+
     Write-Host ""
     Write-Host "[custom_nodes] Installing requirements for $name..."
-    & $UvExe pip install -r $req
+    & $UvExe pip install --python $venvPy -r $req
     if ($LASTEXITCODE -ne 0) {
         Write-Warning "Failed to install requirements for $name"
         if ($Strict) { $script:failed = $true }
     }
 }
 
-# ── Clone / update all nodes ──────────────────────────────────────────────────
+# Clone / update all nodes
 Get-Content $ListFile | ForEach-Object { Install-CustomNode $_ }
 
-# ── Install Python requirements ───────────────────────────────────────────────
+# Install Python requirements into venv
 Write-Host ""
 Write-Host "Installing custom node Python requirements..."
 Get-ChildItem -Path $DestDir -Directory | ForEach-Object {

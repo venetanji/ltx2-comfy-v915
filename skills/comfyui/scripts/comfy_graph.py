@@ -27,7 +27,7 @@ CLI usage:
 Camera LoRAs: dolly-in dolly-out dolly-left dolly-right jib-up jib-down static
 Voices: gio (Giovanni, reference: voice.mp3 in ComfyUI input dir)
 
-Env: COMFY_URL (default: https://comfyui.tail9683c.ts.net)
+Env: COMFY_URL (default: http://localhost:8188)
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ import urllib.request
 import urllib.parse
 from pathlib import Path
 
-BASE = os.environ.get("COMFY_URL", "https://comfyui.tail9683c.ts.net").rstrip("/")
+BASE = os.environ.get("COMFY_URL", "http://localhost:8188").rstrip("/")
 
 # Known voice profiles: name → reference audio filename in ComfyUI input dir
 # reference_text: transcript of the audio (required unless x_vector_only=True)

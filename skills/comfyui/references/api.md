@@ -1,6 +1,6 @@
 # ComfyUI REST API Reference
 
-Base URL: `https://comfyui.tail9683c.ts.net` (env: `COMFY_URL`)
+Base URL: `http://localhost:8188` (env: `COMFY_URL`)
 Version in use: 0.16.1 | GPU: RTX 3080 Ti (12GB VRAM) | PyTorch 2.10+cu130
 
 ---
@@ -64,7 +64,7 @@ curl -X POST \
   -F "image=@/path/to/file.jpg;filename=ref.jpg" \
   -F "type=output" \
   -F "subfolder=" \
-  https://comfyui.tail9683c.ts.net/upload/image
+ http://localhost:8188/upload/image
 ```
 
 Response: `{ "name": "ref.jpg", "subfolder": "", "type": "input" }`
@@ -83,7 +83,7 @@ Returns list of model type folder names:
 Returns list of file paths for that model type.
 
 ```bash
-curl https://comfyui.tail9683c.ts.net/models/loras
+curl http://localhost:8188/models/loras
 # ["ltx-2-19b-lora-camera-control-dolly-in.safetensors", ...]
 ```
 
@@ -91,7 +91,7 @@ curl https://comfyui.tail9683c.ts.net/models/loras
 Full input schema for a node including all available values for enum inputs.
 
 ```bash
-curl https://comfyui.tail9683c.ts.net/object_info/LoraLoader
+curl http://localhost:8188/object_info/LoraLoader
 ```
 
 ```json

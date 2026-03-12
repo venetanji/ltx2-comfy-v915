@@ -1,18 +1,23 @@
 <#
 .SYNOPSIS
     Sets PowerShell execution policy to RemoteSigned for the current user
-    (only if not already sufficiently permissive), then launches the OpenClaw
-    installer in a new terminal window.
+    (only if not already sufficiently permissive), then launches
+    Install-OpenClaw.ps1 in a new terminal window.
+
+.PARAMETER SkillsSource
+    Forwarded to Install-OpenClaw.ps1 — path to the skills/ folder to copy.
 
 .NOTES
     Safe to run multiple times; the policy check is idempotent.
 #>
-param()
+param(
+    [string]$SkillsSource = (Join-Path $PSScriptRoot '..\skills')
+)
 
 $ErrorActionPreference = 'Continue'
 
 # ── Execution policy ──────────────────────────────────────────────────────────
-$permissive = @('RemoteSigned','Unrestricted','Bypass')
+$permissive = @('RemoteSigned', 'Unrestricted', 'Bypass')
 $current = Get-ExecutionPolicy -Scope CurrentUser
 
 if ($permissive -contains $current) {
@@ -27,13 +32,16 @@ if ($permissive -contains $current) {
     }
 }
 
-# ── OpenClaw installer ────────────────────────────────────────────────────────
+# ── Launch OpenClaw install + skills copy in a new window ────────────────────
+$openClawScript = Join-Path $PSScriptRoot 'Install-OpenClaw.ps1'
 Write-Host ""
 Write-Host "Launching OpenClaw installer in a new window..."
 Start-Process powershell -ArgumentList @(
     '-NoProfile',
     '-ExecutionPolicy', 'RemoteSigned',
-    '-Command', "iwr -useb https://openclaw.ai/install.ps1 | iex; Write-Host ''; Write-Host 'OpenClaw install complete. Press Enter to close...'; Read-Host"
+    '-File', $openClawScript,
+    '-SkillsSource', $SkillsSource,
+    '-Wait'
 ) -WindowStyle Normal
 
 exit 0

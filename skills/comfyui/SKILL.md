@@ -1,11 +1,11 @@
 ---
 name: comfyui
-description: ComfyUI image/video/audio generation and delivery. Use for ANY request to generate, edit, or animate images or videos, or to produce speech audio. Handles the full flow: generate → download → present to user. Triggers on: "generate image", "make a video", "animate", "text to image", "comfyui", "flux", "ltx", "image from photo", "voice", "tts", "narrate", user sends a photo for editing/animation.
+description: 'ComfyUI image/video/audio generation and delivery. Use for ANY request to generate, edit, or animate images or videos, or to produce speech audio. Handles the full flow: generate → download → present to user. Triggers on: "generate image", "make a video", "animate", "text to image", "comfyui", "flux", "ltx", "image from photo", "voice", "tts", "narrate", user sends a photo for editing/animation.'
 ---
 
 # ComfyUI Skill
 
-ComfyUI runs at `https://comfyui.tail9683c.ts.net` (RTX 3080 Ti, 12GB VRAM).
+ComfyUI runs at `http://localhost:8188` (RTX 4070 Ti, 16GB VRAM).
 All scripts live in `skills/comfyui/scripts/`. Run from workspace root (`/workspace`).
 Output files are saved to `outputs/` (relative to CWD) — use `--output-dir outputs/` explicitly.
 

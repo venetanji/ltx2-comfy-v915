@@ -116,16 +116,21 @@ REM STEP 3 -- Find / install tools (git, uv, qBittorrent)
 REM ============================================================
 echo.
 echo [Step 3] Locating required tools...
+
+REM Use Find-Tools.ps1 to install missing tools via winget (it refreshes PATH too).
+REM We don't rely on its output file for paths -- we resolve them ourselves below
+REM to avoid FOR /F splitting issues with spaces in paths.
 powershell -NoProfile -ExecutionPolicy RemoteSigned ^
   -File "%SCRIPT_DIR%scripts\Find-Tools.ps1" ^
   -OutFile "%TOOLS_ENV%" ^
   -InstallMissing ^
   -Tools "git,uv,qbittorrent"
 
-REM Read discovered paths back into BAT environment
-for /f "usebackq tokens=1,* delims==" %%K in ("%TOOLS_ENV%") do (
-  if not "%%K"=="" if not "%%L"=="" set "%%K=%%L"
-)
+REM Resolve tool paths directly in BAT after Find-Tools has ensured they are installed.
+REM Order: WinGet shim -> known per-user locations -> system locations -> PATH fallback.
+call :FindUv
+call :FindGit
+call :FindQbt
 
 if not defined GIT_EXE (
   set "FAILED=1"
@@ -433,6 +438,36 @@ set "EXITCODE=0" & goto :Exit
 REM ============================================================
 REM Subroutines
 REM ============================================================
+
+:FindUv
+set "UV_EXE="
+echo [DEBUG FindUv] LocalAppData="%LocalAppData%"
+echo [DEBUG FindUv] checking: "%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
+if exist "%LocalAppData%\Microsoft\WinGet\Links\uv.exe" set "UV_EXE=%LocalAppData%\Microsoft\WinGet\Links\uv.exe"
+echo [DEBUG FindUv] after check1: UV_EXE="%UV_EXE%"
+if not defined UV_EXE if exist "%LocalAppData%\uv\uv.exe" set "UV_EXE=%LocalAppData%\uv\uv.exe"
+if not defined UV_EXE if exist "%LocalAppData%\Programs\uv\uv.exe" set "UV_EXE=%LocalAppData%\Programs\uv\uv.exe"
+if not defined UV_EXE if exist "%ProgramFiles%\uv\uv.exe" set "UV_EXE=%ProgramFiles%\uv\uv.exe"
+if not defined UV_EXE for /f "delims=" %%P in ('where uv.exe 2^>nul') do if not defined UV_EXE set "UV_EXE=%%P"
+exit /b 0
+
+:FindGit
+set "GIT_EXE="
+if exist "%LocalAppData%\Microsoft\WinGet\Links\git.exe" set "GIT_EXE=%LocalAppData%\Microsoft\WinGet\Links\git.exe"
+if not defined GIT_EXE if exist "%LocalAppData%\Programs\Git\cmd\git.exe" set "GIT_EXE=%LocalAppData%\Programs\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%ProgramFiles%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles%\Git\cmd\git.exe"
+if not defined GIT_EXE if exist "%ProgramFiles(x86)%\Git\cmd\git.exe" set "GIT_EXE=%ProgramFiles(x86)%\Git\cmd\git.exe"
+if not defined GIT_EXE for /f "delims=" %%P in ('where git.exe 2^>nul') do if not defined GIT_EXE set "GIT_EXE=%%P"
+if not defined GIT_EXE for /f "tokens=2,*" %%A in ('reg query "HKLM\SOFTWARE\GitForWindows" /v InstallPath 2^>nul ^| findstr /i "InstallPath"') do if exist "%%B\cmd\git.exe" set "GIT_EXE=%%B\cmd\git.exe"
+exit /b 0
+
+:FindQbt
+set "QBT_EXE="
+if exist "%ProgramFiles%\qBittorrent\qbittorrent.exe" set "QBT_EXE=%ProgramFiles%\qBittorrent\qbittorrent.exe"
+if not defined QBT_EXE if exist "%ProgramFiles(x86)%\qBittorrent\qbittorrent.exe" set "QBT_EXE=%ProgramFiles(x86)%\qBittorrent\qbittorrent.exe"
+if not defined QBT_EXE if exist "%LocalAppData%\Programs\qBittorrent\qbittorrent.exe" set "QBT_EXE=%LocalAppData%\Programs\qBittorrent\qbittorrent.exe"
+if not defined QBT_EXE for /f "delims=" %%P in ('where qbittorrent.exe 2^>nul') do if not defined QBT_EXE set "QBT_EXE=%%P"
+exit /b 0
 
 :FindComfyDesktop
 set "COMFY_DESKTOP_EXE="

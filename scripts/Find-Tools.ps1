@@ -155,7 +155,9 @@ if ($wanted -contains 'comfydesktop') {
 
 # ── Write output file ─────────────────────────────────────────────────────────
 $lines = $results.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }
-$lines | Set-Content -Path $OutFile -Encoding UTF8
+# Write UTF-8 WITHOUT BOM — CMD's FOR /F misreads the BOM as part of the first key name.
+$utf8NoBom = New-Object System.Text.UTF8Encoding $false
+[System.IO.File]::WriteAllLines($OutFile, $lines, $utf8NoBom)
 Write-Host "Tool paths written to: $OutFile"
 
 # Exit non-zero if any mandatory tool is missing

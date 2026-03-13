@@ -14,7 +14,7 @@ Output files are saved to `outputs/` (relative to CWD) — use `--output-dir out
 ## Full Workflow: Generate → Download → Present
 
 Every `comfy_graph.py` command automatically downloads outputs to `--output-dir` on success.
-To present a file to the user, reference the saved path with a relative path (no leading `/`):
+To present a file to the user, use the **absolute path** prefixed with `MEDIA:` (no backticks, no markdown):
 
 ```bash
 # 1. Generate — files saved to outputs/
@@ -22,8 +22,12 @@ python skills/comfyui/scripts/comfy_graph.py t2i \
   --prompt "a red apple" --prefix apple --output-dir outputs/
 
 # 2. File is at: outputs/apple_00001_.png
-# 3. Present to user using the relative path (required by Openclaw media delivery):
-#    outputs/apple_00001_.png   ← NOT /workspace/outputs/apple_00001_.png
+# 3. Present to user — use absolute path with MEDIA: prefix (no backticks):
+#    MEDIA:C:\Users\user.V915-31\.openclaw\workspace\outputs\apple_00001_.png
+#
+#    ✅ MEDIA:C:\Users\user.V915-31\.openclaw\workspace\outputs\apple_00001_.png
+#    ❌ outputs/apple_00001_.png  (relative path — does NOT work)
+#    ❌ `MEDIA:...`               (backticks — breaks media delivery)
 ```
 
 ---
@@ -134,7 +138,7 @@ Available builders: `flux2_text_to_image`, `flux2_single_image_edit`, `flux2_dou
 ## Notes
 
 - Output pattern: `<prefix>_00001_.png` / `.mp4` / `.mp3`
-- Always use **relative paths** when presenting files to user (Openclaw media bug with absolute paths)
+- Always use **absolute paths with `MEDIA:` prefix** (no backticks) when presenting files to user, e.g. `MEDIA:C:\Users\user.V915-31\.openclaw\workspace\outputs\file_00001_.png` — but send it without backticks in the actual reply
 - VRAM limit: avoid submitting multiple workflows simultaneously — ComfyUI queues them but VRAM may not clear between runs
 - Inline `--speech-text` OOMs on 12GB when LTX2 is cached; always use the two-step `tts` → `upload` → `--audio-file` pattern
 - For video with LoRAs: always apply `ltx-2-19b-distilled-lora-384` first (strength -0.4), then camera LoRA

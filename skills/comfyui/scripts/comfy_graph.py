@@ -61,6 +61,52 @@ def main():
         print("ERROR: No notify target set. To receive generated assets via OpenClaw, set the environment variable OPENCLAW_NOTIFY_TARGET or pass --notify-target when calling the CLI.")
         sys.exit(2)
 
+    def upload_image(local_path: str) -> str:
+        """Upload a local image file to ComfyUI's input directory.
+        Returns the filename as registered on the server (use this in LoadImage nodes).
+        Works with any image format; content-type is inferred from extension."""
+        path = Path(local_path)
+        data = path.read_bytes()
+        ext = path.suffix.lower()
+        mime = "image/jpeg" if ext in (".jpg", ".jpeg") else "image/png" if ext == ".png" else "application/octet-stream"
+        boundary = "----ComfyUploadBoundary"
+        body = (
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="image"; filename="{path.name}"\r\n'
+            f"Content-Type: {mime}\r\n\r\n"
+        ).encode() + data + (
+            f"\r\n--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="type"\r\n\r\ninput\r\n'
+            f"--{boundary}\r\n"
+            f'Content-Disposition: form-data; name="subfolder"\r\n\r\n\r\n'
+            f"--{boundary}--\r\n"
+        ).encode()
+        req = urllib.request.Request(
+            f"{BASE}/upload/image", data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"}, method="POST")
+        with urllib.request.urlopen(req, timeout=30) as r:
+            resp = json.load(r)
+        return resp["name"]
+
+    def upload_if_local(path: str, upload_flag: bool = True) -> str:
+        """If path points to local file and upload_flag True, upload to ComfyUI input dir and return server filename.
+        Otherwise return the original path unchanged."""
+        if not path:
+            return path
+        try:
+            p = Path(path)
+            if p.exists() and upload_flag:
+                try:
+                    server = upload_image(str(p))
+                    print(f"Uploaded local image {p} -> {server}")
+                    return server
+                except Exception as e:
+                    print(f"[WARN] Failed to upload image {p}: {e}", file=sys.stderr)
+                    return path
+        except Exception:
+            pass
+        return path
+
     if cmd == "t2i":
         wf = flux2.flux2_text_to_image(
             prompt=opts.get("prompt", ""),
@@ -69,6 +115,33 @@ def main():
             filename_prefix=opts.get("prefix", "flux2_t2i"),
             lora=opts.get("lora"), lora_strength=float(opts.get("lora_strength", 1.0)),
             seed=seed)
+    elif cmd == "i2i":
+        image_arg = upload_if_local(opts.get("image", ""))
+        wf = flux2.flux2_single_image_edit(
+            image_filename=image_arg, prompt=opts.get("prompt", ""),
+            width=int(opts.get("width", 1024)), height=int(opts.get("height", 576)),
+            steps=int(opts.get("steps", 4)),
+            filename_prefix=opts.get("prefix", "flux2_i2i"), seed=seed)
+    elif cmd == "i2i2":
+        img1 = upload_if_local(opts.get("image1", ""))
+        img2 = upload_if_local(opts.get("image2", ""))
+        wf = flux2.flux2_double_image_edit(
+            image1_filename=img1, image2_filename=img2,
+            prompt=opts.get("prompt", ""),
+            width=int(opts.get("width", 1024)), height=int(opts.get("height", 576)),
+            steps=int(opts.get("steps", 4)),
+            filename_prefix=opts.get("prefix", "flux2_i2i2"), seed=seed)
+    elif cmd == "angles":
+        prompts_raw = opts.get("prompts", "front view\nside view\n3/4 view")
+        angle_prompts = [p.strip() for p in prompts_raw.splitlines() if p.strip()]
+        image_arg = upload_if_local(opts.get("image", ""))
+        prepend = opts.get("prepend", "")
+        append = opts.get("append", "")
+        wf = flux2.flux2_multiple_angles(
+            image_filename=image_arg,
+            angle_prompts=angle_prompts,
+            prepend=prepend, append=append,
+            filename_prefix=opts.get("prefix", "flux2_angles"))
     elif cmd == "tts":
         wf = tts.qwen_tts(text=opts.get("text", opts.get("prompt", "")), filename_prefix=opts.get("prefix", "tts"))
         timeout = int(opts.get("timeout", 120))

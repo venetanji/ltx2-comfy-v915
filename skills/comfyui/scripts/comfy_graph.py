@@ -803,9 +803,15 @@ def _submit_and_wait(workflow: dict, output_dir: Path, timeout: int = 600):
     raise TimeoutError(f"Timed out after {timeout}s")
 
 
+NOTIFY_TARGET = os.environ.get("OPENCLAW_NOTIFY_TARGET")
+
+
 def _save_assets(entry: dict, output_dir: Path):
+    import subprocess
     output_dir.mkdir(parents=True, exist_ok=True)
     seen = set()
+    send_queue = []
+    saved_files = []
     for nout in entry.get("outputs", {}).values():
         for v in nout.values():
             if isinstance(v, list):
@@ -815,14 +821,100 @@ def _save_assets(entry: dict, output_dir: Path):
                         if fname in seen:
                             continue
                         seen.add(fname)
-                        sf  = item.get("subfolder", "")
-                        tp  = item.get("type", "output")
+                        sf = item.get("subfolder", "")
+                        tp = item.get("type", "output")
                         url = f"{BASE}/view?filename={urllib.parse.quote(fname)}&subfolder={sf}&type={tp}&_={int(time.time()*1000)}"
                         print(f"asset_url: {url}")
                         dest = output_dir / fname
                         with urllib.request.urlopen(url, timeout=120) as r:
                             dest.write_bytes(r.read())
                         print(f"saved: {dest}")
+                        saved_files.append(dest)
+                        # queue this asset for the external sender (assistant watcher)
+                        send_queue.append({
+                            "filename": str(dest.resolve()),
+                            "prompt_id": entry.get("prompt_id"),
+                            "workflow": entry.get("workflow_name", ""),
+                            "timestamp": int(time.time())
+                        })
+    # write a small JSON queue file atomically so an external watcher can pick it up
+    if send_queue:
+        queue_file = output_dir / "._send_queue.json"
+        try:
+            existing = []
+            if queue_file.exists():
+                with queue_file.open("r", encoding="utf-8") as f:
+                    existing = json.load(f)
+            existing.extend(send_queue)
+            tmp = output_dir / f"._send_queue_{int(time.time())}.tmp"
+            with tmp.open("w", encoding="utf-8") as f:
+                json.dump(existing, f)
+            tmp.replace(queue_file)
+            print(f"queued {len(send_queue)} asset(s) for sending: {queue_file}")
+        except Exception as e:
+            print(f"[WARN] Failed to write send queue: {e}", file=sys.stderr)
+
+    # If a notify target is provided (CLI option sets global before calling), copy assets
+    # into OpenClaw outbound folder and use the CLI to send them.
+    notify = globals().get("NOTIFY_TARGET")
+    if notify:
+        outbound_dir = Path.home() / ".openclaw" / "media" / "outbound"
+        outbound_dir.mkdir(parents=True, exist_ok=True)
+        outbound_log = outbound_dir / "send-log-cli.txt"
+        for p in saved_files:
+            try:
+                dst = outbound_dir / p.name
+                if not dst.exists():
+                    dst.write_bytes(p.read_bytes())
+
+                # wait for file stability (size unchanged for 1s)
+                stable_count = 0
+                last_size = -1
+                for _ in range(10):
+                    try:
+                        cur_size = dst.stat().st_size
+                    except Exception:
+                        cur_size = -1
+                    if cur_size == last_size and cur_size > 0:
+                        stable_count += 1
+                    else:
+                        stable_count = 0
+                    if stable_count >= 2:
+                        break
+                    last_size = cur_size
+                    time.sleep(0.5)
+
+                # call openclaw CLI to send the file and capture output
+                caption = f"{p.name} — generated asset (prompt_id={entry.get('prompt_id')})"
+                cmd = ["openclaw", "message", "send", "--channel", "telegram", "--target", str(notify), "--message", caption, "--media", str(dst.resolve())]
+                print("Running:", " ".join(cmd))
+                proc = subprocess.run(cmd, check=False, capture_output=True, text=True)
+
+                # log CLI stdout/stderr and exit code to both logs
+                main_logf = output_dir / "send-log.txt"
+                try:
+                    with main_logf.open("a", encoding="utf-8") as lf:
+                        lf.write(f"[{time.ctime()}] CMD: {' '.join(cmd)}\n")
+                        lf.write(f"exit={proc.returncode}\n")
+                        if proc.stdout:
+                            lf.write("STDOUT:\n" + proc.stdout + "\n")
+                        if proc.stderr:
+                            lf.write("STDERR:\n" + proc.stderr + "\n")
+                except Exception as e:
+                    print(f"[WARN] Failed to write main send-log: {e}", file=sys.stderr)
+                try:
+                    with outbound_log.open("a", encoding="utf-8") as of:
+                        of.write(f"[{time.ctime()}] CMD: {' '.join(cmd)}\n")
+                        of.write(f"exit={proc.returncode}\n")
+                        if proc.stdout:
+                            of.write("STDOUT:\n" + proc.stdout + "\n")
+                        if proc.stderr:
+                            of.write("STDERR:\n" + proc.stderr + "\n")
+                except Exception as e:
+                    print(f"[WARN] Failed to write outbound send-log: {e}", file=sys.stderr)
+
+            except Exception as e:
+                print(f"[WARN] Failed to send asset {p}: {e}", file=sys.stderr)
 
 
 def upload_image(local_path: str) -> str:
@@ -851,6 +943,26 @@ def upload_image(local_path: str) -> str:
     with urllib.request.urlopen(req, timeout=30) as r:
         resp = json.load(r)
     return resp["name"]
+
+
+def upload_if_local(path: str, upload_flag: bool = True) -> str:
+    """If path points to local file and upload_flag True, upload to ComfyUI input dir and return server filename.
+    Otherwise return the original path unchanged."""
+    if not path:
+        return path
+    try:
+        p = Path(path)
+        if p.exists() and upload_flag:
+            try:
+                server = upload_image(str(p))
+                print(f"Uploaded local image {p} -> {server}")
+                return server
+            except Exception as e:
+                print(f"[WARN] Failed to upload image {p}: {e}", file=sys.stderr)
+                return path
+    except Exception:
+        pass
+    return path
 
 
 def _parse_args(args):
@@ -894,6 +1006,16 @@ def main():
     audio_file    = opts.get("audio_file")
     include_audio = "no_audio" not in opts
 
+    # Notify target resolution: CLI flag first, then env var
+    notify_target = opts.get('notify_target') or os.environ.get('OPENCLAW_NOTIFY_TARGET')
+    # Enforce presence of notify target for generation commands to ensure outbound sending works
+    generation_cmds = {'t2i','i2i','i2i2','angles','t2v','i2v','mf'}
+    if cmd in generation_cmds and not notify_target:
+        print("ERROR: No notify target set. To receive generated assets via OpenClaw, set the environment variable OPENCLAW_NOTIFY_TARGET or pass --notify-target when calling the CLI.")
+        print("Example: setx OPENCLAW_NOTIFY_TARGET telegram:123456789")
+        print("Or: python comfy_graph.py angles --image input.png --prompts \"front\\nside\" --notify-target telegram:123456789")
+        sys.exit(2)
+
     if cmd == "t2i":
         wf = flux2_text_to_image(
             prompt=opts.get("prompt", ""),
@@ -918,8 +1040,19 @@ def main():
     elif cmd == "angles":
         prompts_raw = opts.get("prompts", "front view\nside view\n3/4 view")
         angle_prompts = [p.strip() for p in prompts_raw.splitlines() if p.strip()]
+        image_arg = opts.get("image")
+        # If a local file path was provided, upload it to ComfyUI input dir and use the server filename
+        if image_arg:
+            local_path = Path(image_arg)
+            if local_path.exists():
+                try:
+                    server_name = upload_image(str(local_path))
+                    image_arg = server_name
+                    print(f"Uploaded local image {local_path} -> {server_name}")
+                except Exception as e:
+                    print(f"[WARN] Failed to upload image {local_path}: {e}", file=sys.stderr)
         wf = flux2_multiple_angles(
-            image_filename=opts["image"],
+            image_filename=image_arg,
             angle_prompts=angle_prompts,
             filename_prefix=opts.get("prefix", "flux2_angles"))
     elif cmd == "t2v":
@@ -1006,6 +1139,11 @@ def main():
     if dump_only:
         print(json.dumps(wf, indent=2))
         return
+
+    # Set notify target from CLI flag or environment fallback
+    notify = opts.get('notify_target') or os.environ.get('OPENCLAW_NOTIFY_TARGET')
+    if notify:
+        globals()['NOTIFY_TARGET'] = notify
 
     _submit_and_wait(wf, output_dir, timeout)
 

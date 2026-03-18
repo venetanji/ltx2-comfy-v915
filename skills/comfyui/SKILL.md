@@ -171,3 +171,18 @@ Available builders: `flux2_text_to_image`, `flux2_single_image_edit`, `flux2_dou
 - Inline `--speech-text` OOMs on 12GB when LTX2 is cached; always use the two-step `tts` → `upload` → `--audio-file` pattern
 - For video with LoRAs: always apply `ltx-2-19b-distilled-lora-384` first (strength -0.4), then camera LoRA
 - API reference: `skills/comfyui/references/api.md`
+
+
+## Notifications / Autosend rule
+
+This workspace expects a notify target so generated assets are reliably delivered via OpenClaw. comfy_graph will check for a notify target before submitting generation jobs.
+
+- Set the environment variable OPENCLAW_NOTIFY_TARGET to the Telegram target you want to receive assets at, e.g.:
+
+  setx OPENCLAW_NOTIFY_TARGET telegram:123456789
+
+- Or pass it per-run with --notify-target:
+
+  python skills/comfyui/scripts/comfy_graph.py angles --image input.png --prompts "front\nside" --notify-target telegram:123456789
+
+When the notify target is set the script will copy generated outputs into %USERPROFILE%\\.openclaw\\media\\outbound and trigger the OpenClaw message send CLI so files arrive in your chat automatically.

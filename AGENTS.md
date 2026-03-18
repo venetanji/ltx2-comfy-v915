@@ -38,7 +38,7 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 
 ### 📝 Write It Down - No "Mental Notes"!
 
-- **Memory is limited** — if you want to remember something, WRITE IT TO A FILE
+- **Memory is limited** — if you want to remember something, WRITE IT TO AFILE
 - "Mental notes" don't survive session restarts. Files do.
 - When someone says "remember this" → update `memory/YYYY-MM-DD.md` or relevant file
 - When you learn a lesson → update AGENTS.md, TOOLS.md, or the relevant skill
@@ -64,7 +64,7 @@ Capture what matters. Decisions, context, things to remember. Skip the secrets u
 
 - Sending emails, tweets, public posts
 - Anything that leaves the machine
-- Anything you're uncertain about
+- Anything that you're uncertain about
 
 ## Group Chats
 
@@ -113,100 +113,6 @@ Reactions are lightweight social signals. Humans use them constantly — they sa
 
 **Don't overdo it:** One reaction per message max. Pick the one that fits best.
 
-## Tools
-
-Skills provide your tools. When you need one, check its `SKILL.md`. Keep local notes (camera names, SSH details, voice preferences) in `TOOLS.md`.
-
-**🎭 Voice Storytelling:** If you have `sag` (ElevenLabs TTS), use voice for stories, movie summaries, and "storytime" moments! Way more engaging than walls of text. Surprise people with funny voices.
-
-**📝 Platform Formatting:**
-
-- **Discord/WhatsApp:** No markdown tables! Use bullet lists instead
-- **Discord links:** Wrap multiple links in `<>` to suppress embeds: `<https://example.com>`
-- **WhatsApp:** No headers — use **bold** or CAPS for emphasis
-
-## 💓 Heartbeats - Be Proactive!
-
-When you receive a heartbeat poll (message matches the configured heartbeat prompt), don't just reply `HEARTBEAT_OK` every time. Use heartbeats productively!
-
-Default heartbeat prompt:
-`Read HEARTBEAT.md if it exists (workspace context). Follow it strictly. Do not infer or repeat old tasks from prior chats. If nothing needs attention, reply HEARTBEAT_OK.`
-
-You are free to edit `HEARTBEAT.md` with a short checklist or reminders. Keep it small to limit token burn.
-
-### Heartbeat vs Cron: When to Use Each
-
-**Use heartbeat when:**
-
-- Multiple checks can batch together (inbox + calendar + notifications in one turn)
-- You need conversational context from recent messages
-- Timing can drift slightly (every ~30 min is fine, not exact)
-- You want to reduce API calls by combining periodic checks
-
-**Use cron when:**
-
-- Exact timing matters ("9:00 AM sharp every Monday")
-- Task needs isolation from main session history
-- You want a different model or thinking level for the task
-- One-shot reminders ("remind me in 20 minutes")
-- Output should deliver directly to a channel without main session involvement
-
-**Tip:** Batch similar periodic checks into `HEARTBEAT.md` instead of creating multiple cron jobs. Use cron for precise schedules and standalone tasks.
-
-**Things to check (rotate through these, 2-4 times per day):**
-
-- **Emails** - Any urgent unread messages?
-- **Calendar** - Upcoming events in next 24-48h?
-- **Mentions** - Twitter/social notifications?
-- **Weather** - Relevant if your human might go out?
-
-**Track your checks** in `memory/heartbeat-state.json`:
-
-```json
-{
-  "lastChecks": {
-    "email": 1703275200,
-    "calendar": 1703260800,
-    "weather": null
-  }
-}
-```
-
-**When to reach out:**
-
-- Important email arrived
-- Calendar event coming up (&lt;2h)
-- Something interesting you found
-- It's been >8h since you said anything
-
-**When to stay quiet (HEARTBEAT_OK):**
-
-- Late night (23:00-08:00) unless urgent
-- Human is clearly busy
-- Nothing new since last check
-- You just checked &lt;30 minutes ago
-
-**Proactive work you can do without asking:**
-
-- Read and organize memory files
-- Check on projects (git status, etc.)
-- Update documentation
-- Commit and push your own changes
-- **Review and update MEMORY.md** (see below)
-
-### 🔄 Memory Maintenance (During Heartbeats)
-
-Periodically (every few days), use a heartbeat to:
-
-1. Read through recent `memory/YYYY-MM-DD.md` files
-2. Identify significant events, lessons, or insights worth keeping long-term
-3. Update `MEMORY.md` with distilled learnings
-4. Remove outdated info from MEMORY.md that's no longer relevant
-
-Think of it like a human reviewing their journal and updating their mental model. Daily files are raw notes; MEMORY.md is curated wisdom.
-
-The goal: Be helpful without being annoying. Check in a few times a day, do useful background work, but respect quiet time.
-
 ## ComfyUI — Do It Yourself
 
 **Never ask the user to run ComfyUI tasks manually.** You have full access.
@@ -244,3 +150,33 @@ then `download --url <workflow_url>` to fetch them automatically.
 ## Make It Yours
 
 This is a starting point. Add your own conventions, style, and rules as you figure out what works.
+
+---
+## Default scene pipeline — storyworld
+
+When creating visual scenes for Storyworld characters, use the following default pipeline:
+
+1. Fetch character context and reference image
+   - Preferred: MCP calls (mcp.get_character_context → mcp.prepare_reference_image) using the mcporter CLI.
+   - Fallback: raw GitHub character YAML + HuggingFace dataset if MCP is unavailable.
+
+2. Storyboard generation
+   - Use skills/storyworld_storyboard/scripts/generate_storyboard.py to produce a shot-by-shot storyboard, timed shot list, and per-shot LTX-2.3 prompts.
+   - Outputs are written to outputs/storyboard_<ts>/ (JSON + human-readable TXT).
+
+3. Rendering
+   - Render shots one-at-a-time using skills/comfyui/scripts/comfy_graph.py (i2v workflow).
+   - Default: 1 i2v shot, 7s. Render single shots to avoid VRAM conflicts; chain last_frame → next shot when needed.
+
+4. Output handling / delivery
+   - Save media to the workspace outputs/ directory.
+   - Optional autosend: comfy_graph's autosend copies media to %USERPROFILE%\.openclaw\media\outbound and can call the OpenClaw CLI to deliver to the configured notify target.
+   - Configure autosend via the OPENCLAW_NOTIFY_TARGET environment variable or the comfy_graph --notify-target flag.
+
+5. Co-narrator & agents
+   - The main/co-narrator session orchestrates storyboard generation and rendering. Character agent workspaces remain in agents/<CODE-NAME>/ and should reference the generated outputs when presenting media.
+
+Configuration hints
+- COMFYUI_URL: http://localhost:8188 (default)
+- MCP_URL: https://polyu-storyworld.tail9683c.ts.net/mcp
+- OPENCLAW_NOTIFY_TARGET: Telegram chat id (optional, for autosend)

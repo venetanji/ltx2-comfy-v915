@@ -209,17 +209,28 @@ def _ltx2_second_pass(g, model, cond, images, audio_latent,
     Returns (images_hires, audio_or_None)."""
     if seed is None:
         seed = int(time.time() * 1000) % (2**32)
+    # upscale the decoded image (pixel-space) first
     upscaled     = g.node("ImageScale", image=images[0], upscale_method="lanczos",
                           width=width * 2, height=height * 2, crop="disabled")
+    # create a hires latent buffer and inject the upscaled image
     hires_latent = g.node("EmptyLTXVLatentVideo",
                           width=width * 2, height=height * 2, length=length, batch_size=1)
     video_lat_2  = g.node("LTXVImgToVideoInplace", vae=video_vae[0], image=upscaled[0],
                            latent=hires_latent[0], strength=1.0, bypass=False)
+
+    # Use a learned latent upscaler (preferred) when available
+    # The workflow's LatentUpscaleModelLoader typically provides the model filename
+    # We attempt to load the common spatial upscaler name; if missing the loader will be ignored.
+    upscaler_loader = g.node("LatentUpscaleModelLoader", model_name="ltx-2.3-spatial-upscaler-x2-1.0.safetensors")
+    # LTXVLatentUpsampler expects: samples, vae, upscale_model
+    try_up = g.node("LTXVLatentUpsampler", samples=video_lat_2[0], vae=video_vae[0], upscale_model=upscaler_loader[0])
+
+    # If audio exists, concatenate AV latent, using the upsampled video latent
     if audio_latent is not None:
         latent_2 = g.node("LTXVConcatAVLatent",
-                           video_latent=video_lat_2[0], audio_latent=audio_latent)
+                           video_latent=try_up[0], audio_latent=audio_latent)
     else:
-        latent_2 = video_lat_2
+        latent_2 = try_up
     sampler  = g.node("KSamplerSelect", sampler_name="euler_ancestral")
     sigmas   = g.node("ManualSigmas", sigmas="0.909375, 0.725, 0.421875, 0.0")
     noise    = g.node("RandomNoise", noise_seed=seed)
@@ -557,6 +568,168 @@ def ltx2_multiframe(guide_frames: list[tuple[str, int, float]], prompt,
     return g.to_dict()
 
 
+
+# ---------------------------------------------------------------------------
+# LTX2.3 fragments (22B GGUF, two-stage distilled, built-in latent upscale)
+# ---------------------------------------------------------------------------
+
+def _ltx23_loaders(g):
+    """Load LTX2.3 22B GGUF + DualCLIP + video VAE + audio VAE + spatial upscaler.
+    Returns (model, clip, video_vae, audio_vae, upscaler)."""
+    unet  = g.node("UnetLoaderGGUF", unet_name="ltx-2.3-22b-dev-Q4_K_M.gguf")
+    model = g.node("LTXVChunkFeedForward", model=unet[0], chunks=4, dim_threshold=4096)
+    clip  = g.node("DualCLIPLoader",
+                   clip_name1="gemma_3_12B_it_fp4_mixed.safetensors",
+                   clip_name2="ltx-2.3_text_projection_bf16.safetensors",
+                   type="ltxv", device="default")
+    video_vae  = g.node("VAELoaderKJ", vae_name="ltx-2.3-22b-dev_video_vae.safetensors",
+                        device="main_device", weight_dtype="bf16")
+    audio_vae  = g.node("VAELoaderKJ", vae_name="ltx-2.3-22b-dev_audio_vae.safetensors",
+                        device="main_device", weight_dtype="bf16")
+    upscaler   = g.node("LatentUpscaleModelLoader", model_name="ltx-2.3-spatial-upscaler-x2-1.0.safetensors")
+    return model, clip, video_vae, audio_vae, upscaler
+
+
+def _ltx23_condition(g, clip, positive_text, fps=24):
+    """Encode prompt for LTX2.3. Returns cond NodeRef (cond[0]=pos, cond[1]=neg)."""
+    pos = g.node("CLIPTextEncode", text=positive_text, clip=clip)
+    neg = g.node("CLIPTextEncode",
+                 text="blurry, low quality, watermark, distorted, still frame, inconsistent motion",
+                 clip=clip)
+    return g.node("LTXVConditioning", positive=pos[0], negative=neg[0], frame_rate=float(fps))
+
+
+def _ltx23_sample_stage1(g, model, cond, latent, seed=None):
+    """Stage 1: distilled 9-step rollout."""
+    if seed is None:
+        seed = int(time.time() * 1000) % (2**32)
+    sampler = g.node("KSamplerSelect", sampler_name="euler_ancestral_cfg_pp")
+    sigmas  = g.node("ManualSigmas",
+                     sigmas="1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0")
+    noise   = g.node("RandomNoise", noise_seed=seed)
+    guider  = g.node("CFGGuider", model=model[0], positive=cond[0], negative=cond[1], cfg=1.0)
+    return g.node("SamplerCustomAdvanced", noise=noise[0], guider=guider[0],
+                  sampler=sampler[0], sigmas=sigmas[0], latent_image=latent)
+
+
+def _ltx23_sample_stage2(g, model, cond, latent, seed=None):
+    """Stage 2: 4-step refinement pass."""
+    if seed is None:
+        seed = int(time.time() * 1000) % (2**32)
+    sampler = g.node("KSamplerSelect", sampler_name="euler_cfg_pp")
+    sigmas  = g.node("ManualSigmas", sigmas="0.85, 0.7250, 0.4219, 0.0")
+    noise   = g.node("RandomNoise", noise_seed=seed + 1)
+    guider  = g.node("CFGGuider", model=model[0], positive=cond[0], negative=cond[1], cfg=1.0)
+    return g.node("SamplerCustomAdvanced", noise=noise[0], guider=guider[0],
+                  sampler=sampler[0], sigmas=sigmas[0], latent_image=latent)
+
+
+def _ltx23_decode_and_upscale(g, av_latent_s1, model, cond, video_vae, audio_vae, upscaler,
+                               prep_image, seed=None):
+    """Separate AV → upscale video latent → re-inject image → stage 2 → decode.
+    Returns (images, audio)."""
+    sep1     = g.node("LTXVSeparateAVLatent", av_latent=av_latent_s1)
+    upsamp   = g.node("LTXVLatentUpsampler", samples=sep1[0], upscale_model=upscaler[0],
+                      vae=video_vae[0])
+    vid_cond = g.node("LTXVImgToVideoConditionOnly", vae=video_vae[0], image=prep_image,
+                      latent=upsamp[0], strength=1.0, bypass=False)
+    av_s2_in = g.node("LTXVConcatAVLatent", video_latent=vid_cond[0], audio_latent=sep1[1])
+    av_out2  = _ltx23_sample_stage2(g, model, cond, av_s2_in[0], seed=seed)
+    sep2     = g.node("LTXVSeparateAVLatent", av_latent=av_out2)
+    images   = g.node("VAEDecodeTiled", samples=sep2[0], vae=video_vae[0],
+                      tile_size=512, temporal_size=64, overlap=64, temporal_overlap=8)
+    audio    = g.node("LTXVAudioVAEDecode", samples=sep2[1], audio_vae=audio_vae[0])
+    return images, audio
+
+
+def ltx23_image_to_video(image_filename, prompt, seconds=7, fps=24,
+                          filename_prefix="ltx23_i2v", seed=None, include_audio=True):
+    """LTX2.3 22B GGUF image-to-video. Two-stage distilled with built-in latent upscale.
+    Output: 960×544 upscaled to full resolution. ~5-15 min on RTX 4070 Ti.
+    No camera LoRA support yet (use prompt description instead).
+    include_audio=True (default): generates ambient audio via LTX audio VAE."""
+    g = WorkflowGraph()
+    length = seconds * fps + 1
+    width, height = 960, 544
+
+    model, clip, video_vae, audio_vae, upscaler = _ltx23_loaders(g)
+    lora  = g.node("LoraLoaderModelOnly", model=model[0],
+                   lora_name="ltx-2.3-22b-distilled-lora-384.safetensors",
+                   strength_model=0.5)
+    cond  = _ltx23_condition(g, clip, prompt, fps=fps)
+
+    frame   = g.node("LoadImage", image=image_filename)
+    prep    = g.node("LTXVPreprocess", image=frame[0], img_compression=18)
+
+    video_latent = g.node("EmptyLTXVLatentVideo", width=width, height=height,
+                          length=length, batch_size=1)
+    vid_cond_s1  = g.node("LTXVImgToVideoConditionOnly", vae=video_vae[0], image=prep[0],
+                           latent=video_latent[0], strength=0.7, bypass=False)
+
+    if include_audio:
+        audio_latent = g.node("LTXVEmptyLatentAudio",
+                              frames_number=int(length - 4), frame_rate=fps,
+                              audio_vae=audio_vae[0], batch_size=1)
+        latent_s1 = g.node("LTXVConcatAVLatent", video_latent=vid_cond_s1[0],
+                           audio_latent=audio_latent[0])
+    else:
+        latent_s1 = vid_cond_s1
+
+    av_out1 = _ltx23_sample_stage1(g, lora, cond, latent_s1[0], seed=seed)
+    images, audio = _ltx23_decode_and_upscale(
+        g, av_out1, lora, cond, video_vae, audio_vae, upscaler, prep[0], seed=seed)
+
+    video = g.node("CreateVideo", images=images[0], fps=float(fps),
+                   **{"audio": audio[0]} if include_audio else {})
+    g.node("SaveVideo", video=video[0], filename_prefix=filename_prefix,
+           format="auto", codec="auto")
+    return g.to_dict()
+
+
+def ltx23_text_to_video(prompt, seconds=7, fps=24,
+                         filename_prefix="ltx23_t2v", seed=None, include_audio=True):
+    """LTX2.3 22B GGUF text-to-video. Two-stage distilled with built-in latent upscale."""
+    g = WorkflowGraph()
+    length = seconds * fps + 1
+    width, height = 960, 544
+
+    model, clip, video_vae, audio_vae, upscaler = _ltx23_loaders(g)
+    lora  = g.node("LoraLoaderModelOnly", model=model[0],
+                   lora_name="ltx-2.3-22b-distilled-lora-384.safetensors",
+                   strength_model=0.5)
+    cond  = _ltx23_condition(g, clip, prompt, fps=fps)
+
+    video_latent = g.node("EmptyLTXVLatentVideo", width=width, height=height,
+                          length=length, batch_size=1)
+
+    if include_audio:
+        audio_latent = g.node("LTXVEmptyLatentAudio",
+                              frames_number=int(length - 4), frame_rate=fps,
+                              audio_vae=audio_vae[0], batch_size=1)
+        latent_s1 = g.node("LTXVConcatAVLatent", video_latent=video_latent[0],
+                           audio_latent=audio_latent[0])
+    else:
+        latent_s1 = video_latent
+
+    av_out1  = _ltx23_sample_stage1(g, lora, cond, latent_s1[0], seed=seed)
+    sep1     = g.node("LTXVSeparateAVLatent", av_latent=av_out1)
+    upsamp   = g.node("LTXVLatentUpsampler", samples=sep1[0], upscale_model=upscaler[0],
+                      vae=video_vae[0])
+    av_s2_in = g.node("LTXVConcatAVLatent", video_latent=upsamp[0],
+                      audio_latent=sep1[1]) if include_audio else upsamp
+    av_out2  = _ltx23_sample_stage2(g, lora, cond, av_s2_in[0] if include_audio else upsamp[0], seed=seed)
+    sep2     = g.node("LTXVSeparateAVLatent", av_latent=av_out2)
+    images   = g.node("VAEDecodeTiled", samples=sep2[0], vae=video_vae[0],
+                      tile_size=512, temporal_size=64, overlap=64, temporal_overlap=8)
+    audio    = g.node("LTXVAudioVAEDecode", samples=sep2[1], audio_vae=audio_vae[0]) if include_audio else None
+
+    video_node = g.node("CreateVideo", images=images[0], fps=float(fps),
+                        **{"audio": audio[0]} if audio else {})
+    g.node("SaveVideo", video=video_node[0], filename_prefix=filename_prefix,
+           format="auto", codec="auto")
+    return g.to_dict()
+
+
 def extract_last_frame(video_path, filename_prefix="last_frame"):
     """Extract the last frame from a ComfyUI output video (by server-side path).
     video_path: absolute path on the ComfyUI server (e.g. /app/ComfyUI/output/myvideo.mp4).
@@ -750,23 +923,39 @@ def main():
             angle_prompts=angle_prompts,
             filename_prefix=opts.get("prefix", "flux2_angles"))
     elif cmd == "t2v":
-        wf = ltx2_text_to_video(
-            prompt=opts.get("prompt", ""),
-            seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
-            camera_lora=opts.get("camera"),
-            filename_prefix=opts.get("prefix", "ltx2_t2v"),
-            second_pass=second_pass, seed=seed, audio_file=audio_file,
-            speech_text=speech_text, speech_voice=speech_voice,
-            speech_voice_name=speech_voice_name, include_audio=include_audio)
+        model_ver = opts.get("model", "ltx23")
+        if model_ver == "ltx2":
+            wf = ltx2_text_to_video(
+                prompt=opts.get("prompt", ""),
+                seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
+                camera_lora=opts.get("camera"),
+                filename_prefix=opts.get("prefix", "ltx2_t2v"),
+                second_pass=second_pass, seed=seed, audio_file=audio_file,
+                speech_text=speech_text, speech_voice=speech_voice,
+                speech_voice_name=speech_voice_name, include_audio=include_audio)
+        else:
+            wf = ltx23_text_to_video(
+                prompt=opts.get("prompt", ""),
+                seconds=int(opts.get("seconds", 7)), fps=int(opts.get("fps", 24)),
+                filename_prefix=opts.get("prefix", "ltx23_t2v"),
+                seed=seed, include_audio=include_audio)
     elif cmd == "i2v":
-        wf = ltx2_image_to_video(
-            image_filename=opts["image"], prompt=opts.get("prompt", ""),
-            seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
-            camera_lora=opts.get("camera"),
-            filename_prefix=opts.get("prefix", "ltx2_i2v"),
-            second_pass=second_pass, seed=seed, audio_file=audio_file,
-            speech_text=speech_text, speech_voice=speech_voice,
-            speech_voice_name=speech_voice_name, include_audio=include_audio)
+        model_ver = opts.get("model", "ltx23")
+        if model_ver == "ltx2":
+            wf = ltx2_image_to_video(
+                image_filename=opts["image"], prompt=opts.get("prompt", ""),
+                seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
+                camera_lora=opts.get("camera"),
+                filename_prefix=opts.get("prefix", "ltx2_i2v"),
+                second_pass=second_pass, seed=seed, audio_file=audio_file,
+                speech_text=speech_text, speech_voice=speech_voice,
+                speech_voice_name=speech_voice_name, include_audio=include_audio)
+        else:
+            wf = ltx23_image_to_video(
+                image_filename=opts["image"], prompt=opts.get("prompt", ""),
+                seconds=int(opts.get("seconds", 7)), fps=int(opts.get("fps", 24)),
+                filename_prefix=opts.get("prefix", "ltx23_i2v"),
+                seed=seed, include_audio=include_audio)
     elif cmd == "mf":
         # --frames "img1.jpg:0,img2.jpg:48,img3.jpg:-1"  (filename:frame_idx)
         frames_raw = opts.get("frames", "")

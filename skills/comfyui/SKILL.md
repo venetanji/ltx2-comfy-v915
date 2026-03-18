@@ -105,6 +105,34 @@ python skills/comfyui/scripts/comfy_graph.py i2v --image "$FRAME" --prompt "cont
 
 ---
 
+## Model Management
+
+Check and download missing models from any workflow JSON (reads embedded `models` metadata in loader nodes):
+
+```bash
+# Check what's missing (no download)
+python skills/comfyui/scripts/comfy_models.py check --url https://pastebin.com/raw/XYZ
+python skills/comfyui/scripts/comfy_models.py check --workflow path/to/flow.json
+
+# List all models (present + missing)
+python skills/comfyui/scripts/comfy_models.py list --url https://pastebin.com/raw/XYZ
+
+# Download all missing models
+python skills/comfyui/scripts/comfy_models.py download --url https://pastebin.com/raw/XYZ
+
+# Download a single model manually
+python skills/comfyui/scripts/comfy_models.py get \
+  --url https://huggingface.co/Lightricks/LTX-2.3/resolve/main/ltx-2.3-22b-dev.safetensors \
+  --dir checkpoints
+```
+
+Models are saved to `~/Documents/comfyui-git/models/<directory>/`. Set `COMFYUI_MODELS_DIR` to override.
+Set `HF_TOKEN` env var for gated HuggingFace models.
+
+Always run `check` before starting a new workflow — missing models cause silent failures.
+
+---
+
 ## Query / Debug
 
 ```bash

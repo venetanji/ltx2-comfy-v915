@@ -1,7 +1,7 @@
 {
   "id": "92112d97-bb64-4b44-86f2-ea5691ef8f6e",
   "revision": 0,
-  "last_node_id": 112,
+  "last_node_id": 113,
   "last_link_id": 195,
   "nodes": [
     {
@@ -96,51 +96,13 @@
         }
       },
       "widgets_values": [
-        "Flux2-Klein-4b-base_00017_.png",
+        "Loading...",
+        "image",
+        "refresh",
         "image"
       ],
       "color": "#223",
       "bgcolor": "#335"
-    },
-    {
-      "id": 101,
-      "type": "SimplePromptBatcher",
-      "pos": [
-        111.5822127531862,
-        1897.190505322968
-      ],
-      "size": [
-        332.6636218379512,
-        189.9215016544283
-      ],
-      "flags": {},
-      "order": 1,
-      "mode": 0,
-      "inputs": [],
-      "outputs": [
-        {
-          "name": "prompt",
-          "shape": 6,
-          "type": "STRING",
-          "links": [
-            178,
-            194
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "SimplePromptBatcher",
-        "ue_properties": {
-          "widget_ue_connectable": {},
-          "input_ue_unconnectable": {},
-          "version": "7.5.2"
-        }
-      },
-      "widgets_values": [
-        "Turn the camera to a close-up.\nTurn the camera to a wide-angle lens.\nRotate the camera 45 degrees to the right.\nRotate the camera 90 degrees to the right.\nTurn the camera to an aerial view.\nTurn the camera to a low-angle view.\nRotate the camera 45 degrees to the left.\nRotate the camera 90 degrees to the left.\n\n\n\n\n\n"
-      ],
-      "color": "#232",
-      "bgcolor": "#353"
     },
     {
       "id": 92,
@@ -185,28 +147,28 @@
       "properties": {
         "proxyWidgets": [
           [
-            "-1",
-            "text"
+            "73",
+            "noise_seed"
           ],
           [
-            "-1",
-            "noise_seed"
+            "70",
+            "unet_name"
+          ],
+          [
+            "71",
+            "clip_name"
+          ],
+          [
+            "72",
+            "vae_name"
+          ],
+          [
+            "74",
+            "text"
           ],
           [
             "73",
             "control_after_generate"
-          ],
-          [
-            "-1",
-            "unet_name"
-          ],
-          [
-            "-1",
-            "clip_name"
-          ],
-          [
-            "-1",
-            "vae_name"
           ],
           [
             "63",
@@ -242,16 +204,51 @@
           "input_ue_unconnectable": {}
         }
       },
-      "widgets_values": [
-        "",
-        432262096973515,
-        null,
-        "flux-2-klein-4b-fp8.safetensors",
-        "qwen_3_4b.safetensors",
-        "flux2-vae.safetensors"
-      ],
+      "widgets_values": [],
       "color": "#223",
       "bgcolor": "#335"
+    },
+    {
+      "id": 101,
+      "type": "SimplePromptBatcher",
+      "pos": [
+        111.5822127531862,
+        1897.190505322968
+      ],
+      "size": [
+        510.2607598096096,
+        504.09669239282175
+      ],
+      "flags": {},
+      "order": 1,
+      "mode": 0,
+      "inputs": [],
+      "outputs": [
+        {
+          "name": "prompt",
+          "shape": 6,
+          "type": "STRING",
+          "links": [
+            178,
+            194
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "SimplePromptBatcher",
+        "ue_properties": {
+          "widget_ue_connectable": {},
+          "input_ue_unconnectable": {},
+          "version": "7.5.2"
+        }
+      },
+      "widgets_values": [
+        "",
+        "Turn the camera to a close-up.\nTurn the camera to a wide-angle lens.\nRotate the camera 45 degrees to the right.\nRotate the camera 90 degrees to the right.\nTurn the camera to an aerial view.\nTurn the camera to a low-angle view.\nRotate the camera 45 degrees to the left.\nRotate the camera 90 degrees to the left.\n\n\n\n\n\n",
+        ""
+      ],
+      "color": "#232",
+      "bgcolor": "#353"
     }
   ],
   "links": [
@@ -288,8 +285,8 @@
         "version": 1,
         "state": {
           "lastGroupId": 4,
-          "lastNodeId": 86,
-          "lastLinkId": 190,
+          "lastNodeId": 113,
+          "lastLinkId": 195,
           "lastRerouteId": 0
         },
         "revision": 0,
@@ -1042,7 +1039,7 @@
             ],
             "size": [
               240,
-              86
+              166
             ],
             "flags": {},
             "order": 11,
@@ -1069,6 +1066,26 @@
                 "name": "vae",
                 "type": "VAE",
                 "link": 176
+              },
+              {
+                "name": "conditioning",
+                "type": "CONDITIONING",
+                "link": null
+              },
+              {
+                "name": "conditioning_1",
+                "type": "CONDITIONING",
+                "link": null
+              },
+              {
+                "name": "pixels",
+                "type": "IMAGE",
+                "link": null
+              },
+              {
+                "name": "vae",
+                "type": "VAE",
+                "link": null
               }
             ],
             "outputs": [
@@ -1628,8 +1645,8 @@
         "version": 1,
         "state": {
           "lastGroupId": 4,
-          "lastNodeId": 78,
-          "lastLinkId": 170,
+          "lastNodeId": 113,
+          "lastLinkId": 195,
           "lastRerouteId": 0
         },
         "revision": 0,
@@ -1736,7 +1753,7 @@
         "widgets": [],
         "nodes": [
           {
-            "id": 76,
+            "id": 113,
             "type": "ReferenceLatent",
             "pos": [
               170,
@@ -1749,7 +1766,7 @@
             "flags": {
               "collapsed": false
             },
-            "order": 0,
+            "order": 2,
             "mode": 0,
             "inputs": [
               {
@@ -1809,7 +1826,7 @@
             "flags": {
               "collapsed": false
             },
-            "order": 2,
+            "order": 1,
             "mode": 0,
             "inputs": [
               {
@@ -1869,7 +1886,7 @@
             "flags": {
               "collapsed": false
             },
-            "order": 1,
+            "order": 0,
             "mode": 0,
             "inputs": [
               {
@@ -1922,7 +1939,7 @@
             "id": 163,
             "origin_id": 78,
             "origin_slot": 0,
-            "target_id": 76,
+            "target_id": 113,
             "target_slot": 1,
             "type": "LATENT"
           },
@@ -1946,7 +1963,7 @@
             "id": 166,
             "origin_id": -10,
             "origin_slot": 1,
-            "target_id": 76,
+            "target_id": 113,
             "target_slot": 0,
             "type": "CONDITIONING"
           },
@@ -1976,7 +1993,7 @@
           },
           {
             "id": 170,
-            "origin_id": 76,
+            "origin_id": 113,
             "origin_slot": 0,
             "target_id": -20,
             "target_slot": 1,
@@ -1993,7 +2010,7 @@
   },
   "config": {},
   "extra": {
-    "frontendVersion": "1.36.14",
+    "frontendVersion": "1.41.20",
     "workflowRendererVersion": "LG",
     "VHS_latentpreview": false,
     "VHS_latentpreviewrate": 0,

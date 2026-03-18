@@ -36,9 +36,9 @@ python skills/comfyui/scripts/comfy_graph.py t2i \
 
 ```bash
 python skills/comfyui/scripts/comfy_graph.py t2i --prompt "a red apple" --output-dir outputs/
-python skills/comfyui/scripts/comfy_graph.py i2i --image ref.jpg --prompt "in winter" --output-dir outputs/
-python skills/comfyui/scripts/comfy_graph.py i2i2 --image1 char.jpg --image2 bg.jpg --prompt "character in scene" --output-dir outputs/
-python skills/comfyui/scripts/comfy_graph.py angles --image char.jpg --prompts "front\nside\n3/4" --output-dir outputs/
+python skills/comfyui/scripts/comfy_graph.py i2i --image ref.jpg --prompt "in winter" --upload-inputs --output-dir outputs/
+python skills/comfyui/scripts/comfy_graph.py i2i2 --image1 char.jpg --image2 bg.jpg --prompt "character in scene" --upload-inputs --output-dir outputs/
+python skills/comfyui/scripts/comfy_graph.py angles --image char.jpg --prompts "front\nside\n3/4" --upload-inputs --output-dir outputs/
 ```
 
 ## Video (LTX2, ~3-8min)

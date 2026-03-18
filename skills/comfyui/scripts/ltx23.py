@@ -208,6 +208,120 @@ def ltx23_text_to_video(prompt, seconds=7, fps=24,
 
 
 
+def ltx2_image_to_video(image_filename, prompt, seconds=3, fps=24, camera_lora=None,
+                         filename_prefix="ltx2_i2v", second_pass=False, seed=None,
+                         audio_ref=None, audio_file=None, speech_text=None,
+                         speech_voice="Clear, neutral voice", speech_voice_name=None,
+                         include_audio=True):
+    """LTX2 image-to-video. First frame baked via LTXVImgToVideoInplace.
+    include_audio=True (default): LTX generates ambient audio.
+    audio_file: filename of pre-generated audio in ComfyUI input dir (recommended for speech)."""
+    g = WorkflowGraph()
+    length = seconds * fps + 1
+    width, height = 768, 512
+
+    model, clip, video_vae, audio_vae = _ltx2_loaders(g)
+    model = _ltx2_apply_loras(g, model, _ltx2_default_loras(camera_lora))
+    cond  = _ltx2_condition(g, clip, prompt, fps=fps)
+
+    frame   = g.node("LoadImage", image=image_filename)
+    resized = g.node("ResizeImagesByLongerEdge", images=frame[0], longer_edge=1536)
+    prep    = g.node("LTXVPreprocess", image=resized[0], img_compression=35)
+
+    base_latent  = g.node("EmptyLTXVLatentVideo", width=width, height=height,
+                          length=length, batch_size=1)
+    video_latent = g.node("LTXVImgToVideoInplace", vae=video_vae[0], image=prep[0],
+                          latent=base_latent[0], strength=1.0, bypass=False)
+
+    audio_latent, active_audio_vae, raw_audio = _ltx2_resolve_audio(
+        g, audio_vae, length, fps, audio_ref, speech_text, speech_voice, speech_voice_name, include_audio, audio_file=audio_file)
+    if audio_latent is not None:
+        latent = g.node("LTXVConcatAVLatent", video_latent=video_latent[0],
+                        audio_latent=audio_latent)
+    else:
+        latent = video_latent
+
+    av_out = _ltx2_sample(g, model, cond, latent, steps=8, seed=seed)
+
+    if second_pass:
+        images, audio, audio_lat = _ltx2_decode(g, av_out, video_vae, active_audio_vae)
+        images, audio = _ltx2_second_pass(g, model, cond, images, audio_lat,
+                                           video_vae, active_audio_vae, width, height, length, seed=seed)
+    else:
+        images, audio, _ = _ltx2_decode(g, av_out, video_vae, active_audio_vae)
+
+    _ltx2_save(g, images, fps, filename_prefix, audio=audio, raw_audio=raw_audio)
+    return g.to_dict()
+
+
+def ltx2_multiframe(guide_frames: list[tuple[str, int, float]], prompt,
+                     seconds=3, fps=24, filename_prefix="ltx2_mf",
+                     second_pass=False, seed=None, audio_ref=None, audio_file=None,
+                     speech_text=None, speech_voice="Clear, neutral voice",
+                     speech_voice_name=None, include_audio=True):
+    """LTX2 multiframe: guide the video with images at specific frame indices.
+    guide_frames: list of (image_filename, frame_idx, strength).
+      frame_idx=-1 means last frame. strength typically 0.6.
+    Images are preprocessed with LTXVPreprocess.
+    include_audio=True (default): LTX generates ambient audio.
+    audio_file: filename of pre-generated audio in ComfyUI input dir (recommended for speech)."""
+    g = WorkflowGraph()
+    length = seconds * fps + 1
+    width, height = 768, 512
+
+    model, clip, video_vae, audio_vae = _ltx2_loaders(g)
+    model = _ltx2_apply_loras(g, model, _ltx2_default_loras())
+    cond  = _ltx2_condition(g, clip, prompt, fps=fps)
+
+    base_latent = g.node("EmptyLTXVLatentVideo", width=width, height=height,
+                         length=length, batch_size=1)
+
+    # Chain LTXVAddGuide for each guide frame
+    cur_pos    = cond[0]
+    cur_neg    = cond[1]
+    cur_latent = base_latent
+    for img_file, frame_idx, strength in guide_frames:
+        img    = g.node("LoadImage", image=img_file)
+        resized = g.node("ResizeImagesByLongerEdge", images=img[0], longer_edge=1536)
+        prep   = g.node("LTXVPreprocess", image=resized[0], img_compression=35)
+        guided = g.node("LTXVAddGuide", positive=cur_pos, negative=cur_neg,
+                        vae=video_vae[0], latent=cur_latent, image=prep[0],
+                        frame_idx=frame_idx, strength=strength)
+        cur_pos    = guided[0]
+        cur_neg    = guided[1]
+        cur_latent = guided[2]
+
+    # Crop guides to finalize conditioning
+    cropped      = g.node("LTXVCropGuides", positive=cur_pos, negative=cur_neg,
+                          latent=cur_latent)
+    final_pos    = cropped[0]
+    final_neg    = cropped[1]
+    final_latent = cropped[2]
+
+    # Re-apply LTXVConditioning on cropped conditioning
+    cond_cropped = g.node("LTXVConditioning", positive=final_pos, negative=final_neg,
+                          frame_rate=float(fps))
+
+    audio_latent, active_audio_vae, raw_audio = _ltx2_resolve_audio(
+        g, audio_vae, length, fps, audio_ref, speech_text, speech_voice, speech_voice_name, include_audio, audio_file=audio_file)
+    if audio_latent is not None:
+        latent = g.node("LTXVConcatAVLatent", video_latent=final_latent,
+                        audio_latent=audio_latent)
+    else:
+        latent = final_latent
+
+    av_out = _ltx2_sample(g, model, cond_cropped, latent, steps=8, seed=seed)
+
+    if second_pass:
+        images, audio, audio_lat = _ltx2_decode(g, av_out, video_vae, active_audio_vae)
+        images, audio = _ltx2_second_pass(g, model, cond_cropped, images, audio_lat,
+                                           video_vae, active_audio_vae, width, height, length, seed=seed)
+    else:
+        images, audio, _ = _ltx2_decode(g, av_out, video_vae, active_audio_vae)
+
+    _ltx2_save(g, images, fps, filename_prefix, audio=audio, raw_audio=raw_audio)
+    return g.to_dict()
+
 
 def extract_last_frame(video_path, filename_prefix="last_frame"):
     """Extract the last frame from a ComfyUI output video (by server-side path).

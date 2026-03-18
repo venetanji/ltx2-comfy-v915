@@ -225,6 +225,18 @@ Use the `comfyui` skill (`skills/comfyui/SKILL.md`) and its scripts:
 - Models go in `C:\Users\user.V915-31\Documents\ComfyUI\models\`
 - Outputs land in `C:\Users\user.V915-31\Documents\ComfyUI\output\`
 
+### Scripts (installers & helpers)
+PowerShell installers and helpers live in `scripts/` and are intended for ops/installation tasks. Python helper scripts were removed from the repository; the retained PS1 scripts are:
+- Find-Tools.ps1 — detects and lists useful system tools
+- Install-Comfy.ps1 — bootstrap ComfyUI install on Windows
+- Install-CustomNodes.ps1 — installs custom ComfyUI nodes
+- Install-NvidiaDriver.ps1 — downloads/installs NVIDIA driver packages
+- Install-OpenClaw.ps1 — installs and configures OpenClaw
+- Patch-ManagerConfig.ps1 — patch manager/service configuration helper
+- Set-ExecutionPolicy.ps1 — convenience script to set PowerShell execution policy
+
+If you need any of the removed Python helpers restored or converted into agent tasks, tell me which ones and I'll add them to the agents reference.
+
 ### Model Downloads
 Use `skills/comfyui/scripts/comfy_models.py list --url <workflow_url>` to check missing models,
 then `download --url <workflow_url>` to fetch them automatically.

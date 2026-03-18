@@ -5,6 +5,13 @@ from core import WorkflowGraph
 def flux2_text_to_image(prompt, width=1024, height=576, steps=4,
                          filename_prefix="flux2_t2i", lora=None, lora_strength=1.0, seed=None,
                          unet_name="flux-2-klein-4b-fp8.safetensors", vae_name="flux2-vae.safetensors", clip_name="qwen_3_4b.safetensors"):
+    # normalize model names when callers pass None
+    if not unet_name:
+        unet_name = "flux-2-klein-4b-fp8.safetensors"
+    if not vae_name:
+        vae_name = "flux2-vae.safetensors"
+    if not clip_name:
+        clip_name = "qwen_3_4b.safetensors"
     g = WorkflowGraph()
     unet = g.node("UNETLoader", unet_name=unet_name, weight_dtype="default")
     vae  = g.node("VAELoader", vae_name=vae_name)
@@ -28,6 +35,13 @@ def flux2_text_to_image(prompt, width=1024, height=576, steps=4,
 # Image-to-image: single reference
 def flux2_single_image_edit(image_filename, prompt, width=1024, height=576, steps=4,
                               filename_prefix="flux2_i2i", seed=None, unet_name="flux-2-klein-4b-fp8.safetensors", vae_name="flux2-vae.safetensors", clip_name="qwen_3_4b.safetensors"):
+    # normalize model names when callers pass None
+    if not unet_name:
+        unet_name = "flux-2-klein-4b-fp8.safetensors"
+    if not vae_name:
+        vae_name = "flux2-vae.safetensors"
+    if not clip_name:
+        clip_name = "qwen_3_4b.safetensors"
     g = WorkflowGraph()
     unet = g.node("UNETLoader", unet_name=unet_name, weight_dtype="default")
     vae  = g.node("VAELoader", vae_name=vae_name)
@@ -57,6 +71,13 @@ def flux2_single_image_edit(image_filename, prompt, width=1024, height=576, step
 def flux2_double_image_edit(image1_filename, image2_filename, prompt,
                               width=1024, height=576, steps=4,
                               filename_prefix="flux2_i2i2", seed=None, unet_name="flux-2-klein-4b-fp8.safetensors", vae_name="flux2-vae.safetensors", clip_name="qwen_3_4b.safetensors"):
+    # normalize model names when callers pass None
+    if not unet_name:
+        unet_name = "flux-2-klein-4b-fp8.safetensors"
+    if not vae_name:
+        vae_name = "flux2-vae.safetensors"
+    if not clip_name:
+        clip_name = "qwen_3_4b.safetensors"
     g = WorkflowGraph()
     unet = g.node("UNETLoader", unet_name=unet_name, weight_dtype="default")
     vae  = g.node("VAELoader", vae_name=vae_name)

@@ -15,6 +15,14 @@ import urllib.request
 import urllib.parse
 from pathlib import Path
 
+# Ensure UTF-8 output on Windows consoles to avoid 'charmap' codec errors
+try:
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+except Exception:
+    # Python <3.7 or environments where reconfigure isn't available will skip
+    pass
+
 sys.path.insert(0, str(Path(__file__).parent))
 import comfy_graph as cg
 

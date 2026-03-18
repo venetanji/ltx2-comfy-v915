@@ -6,15 +6,16 @@ import time
 def _ltx2_loaders(g):
     """Load GGUF UNET + dual CLIP + video VAE + audio VAE.
     Returns (model, clip, video_vae, audio_vae)."""
-    unet  = g.node("UnetLoaderGGUF", unet_name="ltx-2-19b-distilled_Q4_K_M.gguf")
+    # Use model names available on the server (validated list). Adjusted from older names.
+    unet  = g.node("UnetLoaderGGUF", unet_name="ltx-2.3-22b-dev-Q4_K_M.gguf")
     model = g.node("LTXVChunkFeedForward", model=unet[0], chunks=4, dim_threshold=4096)
     clip  = g.node("DualCLIPLoader",
                    clip_name1="gemma_3_12B_it_fp8_e4m3fn.safetensors",
-                   clip_name2="ltx-2-19b-embeddings_connector_distill_bf16.safetensors",
+                   clip_name2="ltx-2.3_text_projection_bf16.safetensors",
                    type="ltxv", device="default")
-    video_vae = g.node("VAELoaderKJ", vae_name="LTX2_video_vae_bf16.safetensors",
+    video_vae = g.node("VAELoaderKJ", vae_name="ltx-2.3-22b-dev_video_vae.safetensors",
                        device="main_device", weight_dtype="bf16")
-    audio_vae = g.node("VAELoaderKJ", vae_name="LTX2_audio_vae_bf16.safetensors",
+    audio_vae = g.node("VAELoaderKJ", vae_name="ltx-2.3-22b-dev_audio_vae.safetensors",
                        device="main_device", weight_dtype="bf16")
     return model, clip, video_vae, audio_vae
 

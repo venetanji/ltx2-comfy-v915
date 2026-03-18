@@ -12,7 +12,6 @@ Output: prints JSON list of chosen character codes.
 from __future__ import annotations
 import argparse, json, random
 from pathlib import Path
-import yaml
 
 
 def find_codes_in_repo(repo_dir: Path) -> list:

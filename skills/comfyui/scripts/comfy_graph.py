@@ -126,7 +126,8 @@ def main():
             image_filename=image_arg, prompt=opts.get("prompt", ""),
             width=int(opts.get("width", 1024)), height=int(opts.get("height", 576)),
             steps=int(opts.get("steps", 4)),
-            filename_prefix=opts.get("prefix", "flux2_i2i"), seed=seed)
+            filename_prefix=opts.get("prefix", "flux2_i2i"), seed=seed,
+            unet_name=opts.get('unet'), vae_name=opts.get('vae'), clip_name=opts.get('clip'))
     elif cmd == "i2i2":
         img1 = upload_if_local(opts.get("image1", ""))
         img2 = upload_if_local(opts.get("image2", ""))
@@ -135,7 +136,8 @@ def main():
             prompt=opts.get("prompt", ""),
             width=int(opts.get("width", 1024)), height=int(opts.get("height", 576)),
             steps=int(opts.get("steps", 4)),
-            filename_prefix=opts.get("prefix", "flux2_i2i2"), seed=seed)
+            filename_prefix=opts.get("prefix", "flux2_i2i2"), seed=seed,
+            unet_name=opts.get('unet'), vae_name=opts.get('vae'), clip_name=opts.get('clip'))
     elif cmd == "angles":
         prompts_raw = opts.get("prompts", "front view\nside view\n3/4 view")
         angle_prompts = [p.strip() for p in prompts_raw.splitlines() if p.strip()]

@@ -16,6 +16,8 @@ import flux2
 import ltx23
 import tts
 
+BASE = os.environ.get("COMFY_URL", "http://localhost:8188").rstrip("/")
+
 
 def _parse_args(args):
     opts = {}

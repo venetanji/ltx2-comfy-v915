@@ -1025,14 +1025,22 @@ def main():
             lora=opts.get("lora"), lora_strength=float(opts.get("lora_strength", 1.0)),
             seed=seed)
     elif cmd == "i2i":
+        image_arg = opts.get("image")
+        # upload local image if requested
+        if image_arg:
+            image_arg = upload_if_local(image_arg, upload_flag=("upload_inputs" in opts or opts.get("upload_inputs") == "1" or opts.get("upload_inputs") == "true"))
         wf = flux2_single_image_edit(
-            image_filename=opts["image"], prompt=opts.get("prompt", ""),
+            image_filename=image_arg, prompt=opts.get("prompt", ""),
             width=int(opts.get("width", 1024)), height=int(opts.get("height", 576)),
             steps=int(opts.get("steps", 4)),
             filename_prefix=opts.get("prefix", "flux2_i2i"), seed=seed)
     elif cmd == "i2i2":
+        image1 = opts.get("image1")
+        image2 = opts.get("image2")
+        image1 = upload_if_local(image1, upload_flag=("upload_inputs" in opts or opts.get("upload_inputs") == "1" or opts.get("upload_inputs") == "true"))
+        image2 = upload_if_local(image2, upload_flag=("upload_inputs" in opts or opts.get("upload_inputs") == "1" or opts.get("upload_inputs") == "true"))
         wf = flux2_double_image_edit(
-            image1_filename=opts["image1"], image2_filename=opts["image2"],
+            image1_filename=image1, image2_filename=image2,
             prompt=opts.get("prompt", ""),
             width=int(opts.get("width", 1024)), height=int(opts.get("height", 576)),
             steps=int(opts.get("steps", 4)),
@@ -1074,9 +1082,12 @@ def main():
                 seed=seed, include_audio=include_audio)
     elif cmd == "i2v":
         model_ver = opts.get("model", "ltx23")
+        image_arg = opts.get("image")
+        if image_arg:
+            image_arg = upload_if_local(image_arg, upload_flag=("upload_inputs" in opts or opts.get("upload_inputs") == "1" or opts.get("upload_inputs") == "true"))
         if model_ver == "ltx2":
             wf = ltx2_image_to_video(
-                image_filename=opts["image"], prompt=opts.get("prompt", ""),
+                image_filename=image_arg, prompt=opts.get("prompt", ""),
                 seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
                 camera_lora=opts.get("camera"),
                 filename_prefix=opts.get("prefix", "ltx2_i2v"),
@@ -1085,19 +1096,31 @@ def main():
                 speech_voice_name=speech_voice_name, include_audio=include_audio)
         else:
             wf = ltx23_image_to_video(
-                image_filename=opts["image"], prompt=opts.get("prompt", ""),
+                image_filename=image_arg, prompt=opts.get("prompt", ""),
                 seconds=int(opts.get("seconds", 7)), fps=int(opts.get("fps", 24)),
                 filename_prefix=opts.get("prefix", "ltx23_i2v"),
                 seed=seed, include_audio=include_audio)
     elif cmd == "mf":
-        # --frames "img1.jpg:0,img2.jpg:48,img3.jpg:-1"  (filename:frame_idx)
+        # --frames accepts comma-separated or JSON list of "filename:frame_idx" entries
         frames_raw = opts.get("frames", "")
         guide_frames = []
-        for part in frames_raw.split(","):
+        parts = []
+        if frames_raw.startswith("["):
+            # JSON list
+            try:
+                parts = json.loads(frames_raw)
+            except Exception:
+                parts = [frames_raw]
+        else:
+            parts = [p.strip() for p in frames_raw.split(",") if p.strip()]
+        for part in parts:
             part = part.strip()
             if ":" in part:
                 fname, idx = part.rsplit(":", 1)
-                guide_frames.append((fname.strip(), int(idx), float(opts.get("strength", 0.6))))
+                fname = fname.strip()
+                # upload local file when requested
+                fname = upload_if_local(fname, upload_flag=("upload_inputs" in opts or opts.get("upload_inputs") == "1" or opts.get("upload_inputs") == "true"))
+                guide_frames.append((fname, int(idx), float(opts.get("strength", 0.6))))
         wf = ltx2_multiframe(
             guide_frames=guide_frames, prompt=opts.get("prompt", ""),
             seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),

@@ -16,6 +16,22 @@ import flux2
 import ltx23
 import tts
 
+# Backwards-compatibility exports (old comfy_graph API expected these symbols on import)
+# Flux2
+flux2_text_to_image = flux2.flux2_text_to_image
+flux2_single_image_edit = flux2.flux2_single_image_edit
+flux2_double_image_edit = flux2.flux2_double_image_edit
+flux2_multiple_angles = flux2.flux2_multiple_angles
+# TTS
+qwen_tts = tts.qwen_tts
+qwen_voice_clone = tts.qwen_voice_clone
+# LTX2 (map old names to new module functions)
+# The ltx23 module restores the original ltx2_* implementations, so map names accordingly.
+ltx2_text_to_video = ltx23.ltx23_text_to_video
+ltx2_image_to_video = getattr(ltx23, 'ltx2_image_to_video', None)
+ltx2_multiframe = getattr(ltx23, 'ltx2_multiframe', None)
+extract_last_frame = getattr(ltx23, 'extract_last_frame', None)
+
 BASE = os.environ.get("COMFY_URL", "http://localhost:8188").rstrip("/")
 
 

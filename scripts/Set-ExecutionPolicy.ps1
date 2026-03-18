@@ -1,8 +1,7 @@
 <#
 .SYNOPSIS
     Sets PowerShell execution policy to RemoteSigned for the current user
-    (only if not already sufficiently permissive), then launches
-    Install-OpenClaw.ps1 in a new terminal window.
+    when needed, then launches Install-OpenClaw.ps1 in a new terminal window.
 
 .PARAMETER SkillsSource
     Forwarded to Install-OpenClaw.ps1 — path to the skills/ folder to copy.
@@ -17,27 +16,26 @@ param(
 $ErrorActionPreference = 'Continue'
 
 # ── Execution policy ──────────────────────────────────────────────────────────
-# NOTE: All powershell invocations in install_comfy.bat use -ExecutionPolicy Bypass,
-# so this step is best-effort only. GPO at MachinePolicy/UserPolicy scope will
-# override CurrentUser/LocalMachine settings -- that is fine, we just skip.
+# NOTE: install_comfy.bat invokes this helper with -ExecutionPolicy Bypass so the
+# helper itself can always run. That process-scoped setting does not persist, so
+# we must check/write the CurrentUser scope explicitly.
 $permissive = @('RemoteSigned', 'Unrestricted', 'Bypass')
-$effective  = Get-ExecutionPolicy   # effective (all scopes merged)
+$desired    = 'RemoteSigned'
 $current    = Get-ExecutionPolicy -Scope CurrentUser
+$useBypass  = $false
 
-if ($permissive -contains $effective) {
-    Write-Host "PowerShell execution policy already sufficient: $effective"
+if ($permissive -contains $current) {
+    Write-Host "PowerShell execution policy already sufficient for CurrentUser: $current"
 } else {
-    Write-Host "Attempting to set execution policy to RemoteSigned (current user)..."
+    Write-Host "Attempting to set execution policy to RemoteSigned (CurrentUser)..."
     $set = $false
-    foreach ($scope in @('CurrentUser', 'LocalMachine')) {
-        try {
-            Set-ExecutionPolicy -Scope $scope -ExecutionPolicy RemoteSigned -Force -ErrorAction Stop
-            Write-Host "Execution policy set to RemoteSigned at scope: $scope"
-            $set = $true
-            break
-        } catch {
-            Write-Host "Could not set at scope $scope (may be GPO-locked): $($_.Exception.Message.Split([char]10)[0])"
-        }
+    try {
+        Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy $desired -Force -ErrorAction Stop
+        Write-Host "Execution policy set to RemoteSigned at scope: CurrentUser"
+        $set = $true
+    } catch {
+        Write-Host "Could not set CurrentUser policy (may be GPO-locked): $($_.Exception.Message.Split([char]10)[0])"
+        $useBypass = $true
     }
     if (-not $set) {
         Write-Host "NOTE: Execution policy is controlled by Group Policy. This is OK --"
@@ -49,12 +47,15 @@ if ($permissive -contains $effective) {
 $openClawScript = Join-Path $PSScriptRoot 'Install-OpenClaw.ps1'
 Write-Host ""
 Write-Host "Launching OpenClaw installer in a new window..."
-Start-Process powershell -ArgumentList @(
-    '-NoProfile',
-    '-ExecutionPolicy', 'Bypass',
+$argumentList = @('-NoProfile')
+if ($useBypass) {
+    $argumentList += @('-ExecutionPolicy', 'Bypass')
+}
+$argumentList += @(
     '-File', $openClawScript,
     '-SkillsSource', $SkillsSource,
     '-Wait'
-) -WindowStyle Normal
+)
+Start-Process powershell -ArgumentList $argumentList -WindowStyle Normal
 
 exit 0

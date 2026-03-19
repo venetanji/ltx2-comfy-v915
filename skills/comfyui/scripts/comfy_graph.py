@@ -43,7 +43,15 @@ def _parse_args(args):
         if a.startswith("--"):
             key = a[2:].replace("-", "_")
             if i + 1 < len(args) and not args[i + 1].startswith("--"):
-                opts[key] = args[i + 1]; i += 2
+                val = args[i + 1]
+                if key in opts:
+                    if isinstance(opts[key], list):
+                        opts[key].append(val)
+                    else:
+                        opts[key] = [opts[key], val]
+                else:
+                    opts[key] = val
+                i += 2
             else:
                 opts[key] = True; i += 1
         else:
@@ -77,7 +85,7 @@ def main():
     include_audio = "no_audio" not in opts
 
     notify_target = opts.get('notify_target') or __import__('os').environ.get('OPENCLAW_NOTIFY_TARGET')
-    generation_cmds = {'t2i','i2i','i2i2','angles','t2v','i2v','mf'}
+    generation_cmds = {'t2i','i2i','i2i2','angles','t2v','i2v','mf', 'last_frame'}
     if cmd in generation_cmds and not notify_target:
         print("ERROR: No notify target set. To receive generated assets via OpenClaw, set the environment variable OPENCLAW_NOTIFY_TARGET or pass --notify-target when calling the CLI.")
         sys.exit(2)
@@ -170,6 +178,39 @@ def main():
         timeout = int(opts.get("timeout", 120))
     elif cmd == "t2v":
         wf = ltx23.ltx23_text_to_video(prompt=opts.get("prompt",""), seconds=int(opts.get("seconds",7)), fps=int(opts.get("fps",24)), filename_prefix=opts.get("prefix","ltx23_t2v"), seed=seed)
+    elif cmd == "i2v":
+        image_arg = upload_if_local(opts.get("image", ""))
+        wf = ltx23.ltx2_image_to_video(
+            image_filename=image_arg, prompt=opts.get("prompt", ""),
+            seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
+            camera_lora=opts.get("camera_lora"),
+            filename_prefix=opts.get("prefix", "ltx2_i2v"),
+            second_pass=second_pass, seed=seed,
+            speech_text=speech_text, speech_voice=speech_voice,
+            speech_voice_name=speech_voice_name, audio_file=audio_file,
+            include_audio=include_audio)
+    elif cmd == "mf":
+        # multiframe expects a series of --frame <file>:<idx>:<strength>
+        frames_raw = opts.get("frame", "")
+        if isinstance(frames_raw, str):
+            frames_raw = [frames_raw]
+        guide_frames = []
+        for f in frames_raw:
+            parts = f.split(":")
+            if len(parts) == 3:
+                guide_frames.append((upload_if_local(parts[0]), int(parts[1]), float(parts[2])))
+        wf = ltx23.ltx2_multiframe(
+            guide_frames=guide_frames, prompt=opts.get("prompt", ""),
+            seconds=int(opts.get("seconds", 3)), fps=int(opts.get("fps", 24)),
+            filename_prefix=opts.get("prefix", "ltx2_mf"),
+            second_pass=second_pass, seed=seed,
+            speech_text=speech_text, speech_voice=speech_voice,
+            speech_voice_name=speech_voice_name, audio_file=audio_file,
+            include_audio=include_audio)
+    elif cmd == "last_frame":
+        wf = ltx23.extract_last_frame(
+            video_path=opts.get("video_path", ""),
+            filename_prefix=opts.get("prefix", "last_frame"))
     else:
         print(f"Unknown command: {cmd}\n{__doc__}"); sys.exit(1)
 

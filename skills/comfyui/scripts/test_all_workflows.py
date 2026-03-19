@@ -25,11 +25,13 @@ except Exception:
 
 sys.path.insert(0, str(Path(__file__).parent))
 import comfy_graph as cg
+from core import _save_assets
 
 BASE = os.environ.get("COMFY_URL", "http://localhost:8188").rstrip("/")
 OUTPUT_DIR = Path("test_outputs")
 RESULTS_FILE = Path("test_results.json")
 SKIP_SECOND_PASS = "--skip-second-pass" in sys.argv
+NOTIFY_TARGET = "523910944"
 
 results = []
 
@@ -52,8 +54,12 @@ def poll(prompt_id, timeout=900):
     start = time.time()
     deadline = start + timeout
     while time.time() < deadline:
-        with urllib.request.urlopen(f"{BASE}/history/{prompt_id}", timeout=15) as r:
-            hist = json.load(r)
+        try:
+            with urllib.request.urlopen(f"{BASE}/history/{prompt_id}", timeout=15) as r:
+                hist = json.load(r)
+        except:
+            time.sleep(3)
+            continue
         entry = hist.get(prompt_id)
         if entry:
             outputs = entry.get("outputs", {})
@@ -85,31 +91,30 @@ def poll(prompt_id, timeout=900):
     return "timeout", {}, timeout, f"Did not complete in {timeout}s"
 
 
-def save_assets(prompt_id):
+def handle_assets(prompt_id, name, prompt):
     try:
         with urllib.request.urlopen(f"{BASE}/history/{prompt_id}", timeout=15) as r:
             hist = json.load(r)
         entry = hist.get(prompt_id, {})
+        entry["workflow_name"] = name
+        # Use the core helper which already handles downloading, outbound copying, and notifying
+        _save_assets(entry, OUTPUT_DIR, notify=NOTIFY_TARGET, user_prompt=prompt)
+        
+        # Return local paths for internal tracking
         saved = []
         for nout in entry.get("outputs", {}).values():
             for v in nout.values():
                 if isinstance(v, list):
                     for item in v:
                         if isinstance(item, dict) and "filename" in item:
-                            fname = item["filename"]
-                            sf = item.get("subfolder", "")
-                            tp = item.get("type", "output")
-                            url = f"{BASE}/view?filename={urllib.parse.quote(fname)}&subfolder={sf}&type={tp}&_={int(time.time()*1000)}"
-                            dest = OUTPUT_DIR / fname
-                            with urllib.request.urlopen(url, timeout=120) as r:
-                                dest.write_bytes(r.read())
-                            saved.append(str(dest))
+                            saved.append(str(OUTPUT_DIR / item["filename"]))
         return saved
     except Exception as e:
+        log(f"  Error handling assets: {e}")
         return [f"save_error: {e}"]
 
 
-def run_test(name, workflow, timeout=900):
+def run_test(name, workflow, prompt=None, timeout=900):
     log(f"  Submitting: {name}")
     try:
         result = submit(workflow)
@@ -126,7 +131,7 @@ def run_test(name, workflow, timeout=900):
         log(f"  → {status} in {elapsed}s  assets={assets}")
         saved = []
         if status == "success":
-            saved = save_assets(pid)
+            saved = handle_assets(pid, name, prompt)
         rec = {"name": name, "status": status, "elapsed_s": elapsed,
                "assets": assets, "saved": saved, "error": err}
     except Exception as e:
@@ -171,18 +176,21 @@ def main():
 
     # ── 1. Flux2 text-to-image ────────────────────────────────────
     log("\n[1] Flux2 t2i")
+    p1 = "a red apple on a wooden table, photorealistic"
     run_test("flux2_t2i",
-             cg.flux2_text_to_image("a red apple on a wooden table, photorealistic",
-                                     width=512, height=512, seed=seed))
+             cg.flux2_text_to_image(p1, width=512, height=512, seed=seed),
+             prompt=p1)
 
     # ── 2. Flux2 text-to-image with LoRA ─────────────────────────
     log("\n[2] Flux2 t2i + pixel art LoRA")
+    p2 = "a red apple"
     run_test("flux2_t2i_lora",
-             cg.flux2_text_to_image("a red apple",
+             cg.flux2_text_to_image(p2,
                                      width=512, height=512, seed=seed,
                                      lora="pixel_art_style_z_image_turbo.safetensors",
                                      lora_strength=1.0,
-                                     filename_prefix="test_t2i_lora"))
+                                     filename_prefix="test_t2i_lora"),
+             prompt=p2)
 
     # ── 3. Flux2 single-image edit ────────────────────────────────
     # Use the saved output of test 1 as reference (upload to ComfyUI input dir)
@@ -203,10 +211,12 @@ def main():
 
     if ref_img:
         log(f"  Using reference image: {ref_img}")
+        p3 = "same scene at night"
         run_test("flux2_i2i",
-                 cg.flux2_single_image_edit(ref_img, "same scene at night",
+                 cg.flux2_single_image_edit(ref_img, p3,
                                              width=512, height=512, seed=seed,
-                                             filename_prefix="test_i2i"))
+                                             filename_prefix="test_i2i"),
+                 prompt=p3)
     else:
         log("  No reference image found in history, skipping i2i test")
         results.append({"name": "flux2_i2i", "status": "skipped", "error": "no ref image"})
@@ -220,6 +230,7 @@ def main():
                      ref_img,
                      angle_prompts=["front view", "side view", "3/4 angle view"],
                      filename_prefix="test_angles"),
+                 prompt="multiple angles",
                  timeout=180)
     else:
         log("  Skipping — no reference image")
@@ -228,18 +239,22 @@ def main():
 
     # ── 5. TTS ────────────────────────────────────────────────────
     log("\n[5] Qwen TTS")
+    p5 = "This is a test of the text to speech system."
     run_test("qwen_tts",
-             cg.qwen_tts("This is a test of the text to speech system.",
+             cg.qwen_tts(p5,
                           voice_instruct="Clear, neutral male voice",
                           filename_prefix="test_tts"),
+             prompt=p5,
              timeout=120)
 
     # ── 6. Voice clone ────────────────────────────────────────────
     log("\n[6] Qwen voice clone (gio)")
+    p6 = "This is a test using the cloned voice."
     run_test("qwen_clone",
-             cg.qwen_voice_clone("This is a test using the cloned voice.",
+             cg.qwen_voice_clone(p6,
                                   voice_name="gio",
                                   filename_prefix="test_clone"),
+             prompt=p6,
              timeout=180)
 
     # ── 7. LTX2 t2v — increasing lengths ─────────────────────────
@@ -258,6 +273,7 @@ def main():
                        cg.ltx2_text_to_video(prompt_t2v, seconds=secs,
                                               filename_prefix=f"test_t2v_{secs}s",
                                               seed=seed),
+                       prompt=prompt_t2v,
                        timeout=900)
         if rec["status"] in ("oom", "error"):
             t2v_oom_at = secs
@@ -270,12 +286,13 @@ def main():
 
     if i2v_ref:
         log(f"  Using first frame: {i2v_ref}")
+        p8 = "cinematic dolly in, dramatic lighting"
         run_test("ltx2_i2v_3s_dolly",
-                 cg.ltx2_image_to_video(i2v_ref,
-                                         "cinematic dolly in, dramatic lighting",
+                 cg.ltx2_image_to_video(i2v_ref, p8,
                                          seconds=3, camera_lora="dolly-in",
                                          filename_prefix="test_i2v_dolly",
                                          seed=seed),
+                 prompt=p8,
                  timeout=900)
     else:
         log("  No reference frame, skipping")
@@ -298,6 +315,7 @@ def main():
                                                    seconds=secs,
                                                    filename_prefix=f"test_i2v_{secs}s",
                                                    seed=seed),
+                           prompt=prompt_t2v,
                            timeout=900)
             if rec["status"] in ("oom", "error"):
                 i2v_oom_at = secs
@@ -329,6 +347,7 @@ def main():
         run_test("ltx2_mf_1frame",
                  cg.ltx2_multiframe([(mf_frames[0], 0, 0.8)], mf_prompt,
                                      seconds=3, filename_prefix="test_mf1", seed=seed),
+                 prompt=mf_prompt,
                  timeout=900)
 
         # 10b. 2 guide frames (start + end)
@@ -336,6 +355,7 @@ def main():
         run_test("ltx2_mf_2frames",
                  cg.ltx2_multiframe([(mf_frames[0], 0, 0.6), (mf_frames[-1], -1, 0.6)],
                                      mf_prompt, seconds=3, filename_prefix="test_mf2", seed=seed),
+                 prompt=mf_prompt,
                  timeout=900)
 
         # 10c. 3 guide frames (start + mid + end) if enough images available
@@ -347,6 +367,7 @@ def main():
                      cg.ltx2_multiframe(
                          [(mf_frames[0], 0, 0.6), (mid_frame, mid_idx, 0.5), (mf_frames[-1], -1, 0.6)],
                          mf_prompt, seconds=3, filename_prefix="test_mf3", seed=seed),
+                     prompt=mf_prompt,
                      timeout=900)
         else:
             results.append({"name": "ltx2_mf_3frames", "status": "skipped",
@@ -375,6 +396,7 @@ def main():
         log(f"  Extracting last frame from: {server_video_path}")
         lf_rec = run_test("last_frame_extract",
                           cg.extract_last_frame(server_video_path, filename_prefix="test_lastframe"),
+                          prompt="extract last frame",
                           timeout=60)
         # Download and upload the extracted PNG for the chain i2v
         chain_ref = None
@@ -392,6 +414,7 @@ def main():
                      cg.ltx2_image_to_video(chain_ref, prompt_t2v,
                                              seconds=3, filename_prefix="test_chain",
                                              seed=seed),
+                     prompt=prompt_t2v,
                      timeout=900)
         else:
             results.append({"name": "ltx2_chain_i2v", "status": "skipped",
@@ -410,6 +433,7 @@ def main():
                  cg.ltx2_text_to_video(prompt_t2v, seconds=2,
                                         filename_prefix="test_t2v_2pass",
                                         second_pass=True, seed=seed),
+                 prompt=prompt_t2v,
                  timeout=1200)
 
         log("\n[14] LTX2 i2v 2s + second pass")
@@ -418,6 +442,7 @@ def main():
                      cg.ltx2_image_to_video(i2v_ref, prompt_t2v, seconds=2,
                                              filename_prefix="test_i2v_2pass",
                                              second_pass=True, seed=seed),
+                     prompt=prompt_t2v,
                      timeout=1200)
     else:
         log("\n[13-14] Second-pass tests skipped (--skip-second-pass)")

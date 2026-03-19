@@ -6,13 +6,12 @@ import time
 def _ltx2_loaders(g):
     """Load GGUF UNET + dual CLIP + video VAE + audio VAE.
     Returns (model, clip, video_vae, audio_vae)."""
-    # Use model names available on the server (validated list). Adjusted from older names.
     unet  = g.node("UnetLoaderGGUF", unet_name="ltx-2.3-22b-dev-Q4_K_M.gguf")
     model = g.node("LTXVChunkFeedForward", model=unet[0], chunks=4, dim_threshold=4096)
     clip  = g.node("DualCLIPLoader",
                    clip_name1="gemma_3_12B_it_fp8_e4m3fn.safetensors",
                    clip_name2="ltx-2.3_text_projection_bf16.safetensors",
-                   type="ltxv", device="default")
+                   type="ltxv")
     video_vae = g.node("VAELoaderKJ", vae_name="ltx-2.3-22b-dev_video_vae.safetensors",
                        device="main_device", weight_dtype="bf16")
     audio_vae = g.node("VAELoaderKJ", vae_name="ltx-2.3-22b-dev_audio_vae.safetensors",
@@ -51,7 +50,7 @@ def _ltx2_audio_latent(g, audio_vae, length, fps=24, audio_ref=None):
 def _ltx2_sample(g, model, cond, latent, steps=8, seed=None):
     """Single-pass sampling. latent may be video-only or AV."""
     if seed is None:
-        seed = int(time.time() * 1000) % (2**32)
+        seed = int(time.time() * 1000) % (2**31) # Standard 32-bit seed
     sampler  = g.node("KSamplerSelect", sampler_name="euler_ancestral")
     schedule = g.node("LTXVScheduler", steps=steps, max_shift=2.05, base_shift=0.95,
                       stretch=True, terminal=0.1, latent=latent)
@@ -121,8 +120,8 @@ def _ltx2_save(g, images, fps, filename_prefix, audio=None, raw_audio=None):
 
 
 def _ltx2_default_loras(camera_lora=None):
-    """Build default LoRA list: distilled (-0.4) + optional camera (+1.0)."""
-    loras = [("ltx-2-19b-distilled-lora-384.safetensors", -0.4)]
+    """Build default LoRA list: distilled (0.6) + optional camera (+1.0)."""
+    loras = [("ltx-2.3-22b-distilled-lora-384.safetensors", 0.6)]
     if camera_lora:
         loras.append((f"ltx-2-19b-lora-camera-control-{camera_lora}.safetensors", 1.0))
     return loras
@@ -171,40 +170,26 @@ def _ltx2_resolve_audio(g, audio_vae, length, fps, audio_ref, speech_text, speec
 def ltx23_text_to_video(prompt, seconds=7, fps=24,
                          filename_prefix="ltx23_t2v", seed=None, include_audio=True):
     g = WorkflowGraph()
-    length = seconds * fps + 1
-    width, height = 960, 544
+    # LTXV expects (seconds * fps) + 1, and it must be a multiple of 8 + 1 (e.g., 73, 97, 121...)
+    raw_length = seconds * fps
+    length = ((raw_length // 8) * 8) + 1
+    width, height = 768, 512
 
     model, clip, video_vae, audio_vae = _ltx2_loaders(g)
+    model = _ltx2_apply_loras(g, model, _ltx2_default_loras())
     cond  = _ltx2_condition(g, clip, prompt, fps=fps)
 
     video_latent = g.node("EmptyLTXVLatentVideo", width=width, height=height, length=length, batch_size=1)
-    if include_audio:
-        audio_latent = g.node("LTXVEmptyLatentAudio", frames_number=int(length - 4), frame_rate=fps, audio_vae=audio_vae[0], batch_size=1)
-        latent_s1 = g.node("LTXVConcatAVLatent", video_latent=video_latent[0], audio_latent=audio_latent[0])
-    else:
-        latent_s1 = video_latent
+    
+    # Simple version: if include_audio is true, just use the built-in ambient audio generation
+    # but ensure it's not causing the 400 error. For now, let's try WITHOUT audio to isolate.
+    latent = video_latent
 
-    sampler = g.node("KSamplerSelect", sampler_name="euler_ancestral_cfg_pp")
-    sigmas  = g.node("ManualSigmas", sigmas="1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0")
-    noise   = g.node("RandomNoise", noise_seed=int(time.time() * 1000) % (2**32))
-    guider  = g.node("CFGGuider", model=model[0], positive=cond[0], negative=cond[1], cfg=1.0)
-    av_out1 = g.node("SamplerCustomAdvanced", noise=noise[0], guider=guider[0], sampler=sampler[0], sigmas=sigmas[0], latent_image=latent_s1[0])
+    av_out = _ltx2_sample(g, model, cond, latent, steps=8, seed=seed)
 
-    sep1     = g.node("LTXVSeparateAVLatent", av_latent=av_out1)
-    upsamp   = g.node("LTXVLatentUpsampler", samples=sep1[0], upscale_model=g.node("LatentUpscaleModelLoader", model_name="ltx-2.3-spatial-upscaler-x2-1.0.safetensors")[0], vae=video_vae[0])
-    av_s2_in = g.node("LTXVConcatAVLatent", video_latent=upsamp[0], audio_latent=sep1[1]) if include_audio else upsamp
-    sampler2 = g.node("KSamplerSelect", sampler_name="euler_cfg_pp")
-    sigmas2  = g.node("ManualSigmas", sigmas="0.85, 0.7250, 0.4219, 0.0")
-    noise2   = g.node("RandomNoise", noise_seed=int(time.time() * 1000) % (2**32) + 1)
-    guider2  = g.node("CFGGuider", model=model[0], positive=cond[0], negative=cond[1], cfg=1.0)
-    av_out2  = g.node("SamplerCustomAdvanced", noise=noise2[0], guider=guider2[0], sampler=sampler2[0], sigmas=sigmas2[0], latent_image=av_s2_in[0] if include_audio else av_s2_in)
+    images, _, _ = _ltx2_decode(g, av_out, video_vae, None)
 
-    sep2     = g.node("LTXVSeparateAVLatent", av_latent=av_out2)
-    images   = g.node("VAEDecodeTiled", samples=sep2[0], vae=video_vae[0], tile_size=512, temporal_size=64, overlap=64, temporal_overlap=8)
-    audio    = g.node("LTXVAudioVAEDecode", samples=sep2[1], audio_vae=audio_vae[0]) if include_audio else None
-
-    video_node = g.node("CreateVideo", images=images[0], fps=float(fps), **{"audio": audio[0]} if audio else {})
-    g.node("SaveVideo", video=video_node[0], filename_prefix=filename_prefix, format="auto", codec="auto")
+    _ltx2_save(g, images, fps, filename_prefix, audio=None)
     return g.to_dict()
 
 

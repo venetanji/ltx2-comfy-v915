@@ -397,7 +397,8 @@ function Main {
     Bootstrap-InstallerRepo
 
     $docsDir = Get-DocumentsDir
-    $installerRoot = $PSScriptRoot
+    # PSScriptRoot is the scripts\ subfolder; repo root is one level up
+    $installerRoot = Split-Path $PSScriptRoot -Parent
     $comfySrc = Join-Path $docsDir 'comfyui-git'
     $comfyData = Join-Path $docsDir 'ComfyUI'
     $customNodesList = Join-Path $installerRoot 'custom_nodes.txt'
@@ -421,7 +422,7 @@ function Main {
 
     Write-Host ''
     Write-Host '[Step 2] Setting execution policy and launching OpenClaw...'
-    Invoke-HelperScript -ScriptName 'Set-ExecutionPolicy.ps1' -Arguments @('-SkillsSource', (Join-Path $installerRoot '..\skills')) | Out-Null
+    Invoke-HelperScript -ScriptName 'Set-ExecutionPolicy.ps1' -Arguments @('-SkillsSource', (Join-Path $installerRoot 'skills')) | Out-Null
 
     Write-Host ''
     Write-Host '[Step 3] Locating required tools...'

@@ -46,6 +46,7 @@ $legacyCandidates = @(
 function Update-IniFile {
     param([string]$Path, [bool]$CreateIfMissing = $false)
 
+    $lines = @()
     if (-not (Test-Path $Path)) {
         if (-not $CreateIfMissing) { return $false }
         $dir = Split-Path $Path
@@ -60,26 +61,30 @@ function Update-IniFile {
         $lines = Get-Content $Path
     }
 
-    # Ensure [default] section exists
-    if (-not ($lines -match '^\[default\]')) {
-        $lines = @('[default]') + $lines
+    # Ensure [default] section exists at the very beginning
+    if ($lines.Count -eq 0 -or $lines[0] -ne '[default]') {
+        $lines = @('[default]') + ($lines | Where-Object { $_ -and $_ -ne '[default]' })
     }
 
     foreach ($key in $desired.Keys) {
         $val   = $desired[$key]
         $found = $false
-        $lines = $lines | ForEach-Object {
-            if ($_ -match ('^\s*' + [regex]::Escape($key) + '\s*=')) {
+        $newLines = @()
+        foreach ($line in $lines) {
+            if ($line -match ('^\s*' + [regex]::Escape($key) + '\s*=')) {
                 $found = $true
-                "$key = $val"
-            } else { $_ }
+                $newLines += "$key = $val"
+            } else {
+                $newLines += $line
+            }
         }
+        $lines = $newLines
         if (-not $found) {
             $lines += "$key = $val"
         }
     }
 
-    Set-Content -Path $Path -Value $lines -Encoding UTF8
+    $lines | Set-Content -Path $Path -Encoding UTF8
     Write-Host "  -> Done (security_level=normal, network_mode=personal_cloud, use_uv=True)"
     return $true
 }

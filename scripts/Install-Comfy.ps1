@@ -367,7 +367,7 @@ function Start-ComfyUi {
     $env:GIT_PYTHON_GIT_EXECUTABLE = $GitExe
     Push-Location $ComfySrc
     try {
-        & $UvExe run python main.py --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory $ComfyData
+        & $UvExe run python main.py --reserve-vram 5 --enable-manager --use-sage-attention --base-directory $ComfyData
         return $LASTEXITCODE
     } finally {
         Pop-Location

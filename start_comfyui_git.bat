@@ -73,7 +73,7 @@ powershell -NoProfile -ExecutionPolicy RemoteSigned -WindowStyle Hidden -Command
   "Start-Job -ScriptBlock { $url='http://localhost:8188'; $max=120; $i=0; while($i -lt $max){ try{ $r=(Invoke-WebRequest $url -UseBasicParsing -TimeoutSec 2 -ErrorAction Stop); if($r.StatusCode -lt 500){ Start-Process $url; break } }catch{}; Start-Sleep 2; $i++ } } | Out-Null"
 
 pushd "%COMFY_DIR%"
-"%UV_EXE%" run python main.py --port 8188 --reserve-vram 5 --listen 0.0.0.0 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%" --database-url "!COMFY_DB_URL!"
+"%UV_EXE%" run python main.py --port 8188 --reserve-vram 5 --enable-manager --use-sage-attention --base-directory "%COMFY_DATA%" --database-url "!COMFY_DB_URL!"
 set "EXITCODE=%ERRORLEVEL%"
 popd
 
